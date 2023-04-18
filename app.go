@@ -31,27 +31,23 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-func (a *App) SetToggleHotkey(key string) string {
+// Register global hotkey to hide/show the application
+func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	if a.ghk != nil {
 		err := a.ghk.Unregister()
 		runtime.LogDebug(a.ctx, "Unregister old hotkey")
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
-	a.ghk = hotkey.New([]hotkey.Modifier{hotkey.ModAlt, hotkey.ModShift}, hotkey.KeyS)
-	runtime.LogDebug(a.ctx, "Register hotkey")
+	a.ghk = hotkey.New(mods, key)
+	runtime.LogDebug(a.ctx, fmt.Sprintf("Register hotkey[%s]", a.ghk.String()))
 	err := a.ghk.Register()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	runtime.LogDebug(a.ctx, "Registered hotkey")
-
-	// go func() {
-	// 	a.ghk <- hotkey.Event{}
-	// 	fmt.Println("Sent to channel")
-	// }()
 
 	go func() {
 		visible := true
@@ -70,5 +66,5 @@ func (a *App) SetToggleHotkey(key string) string {
 			}
 		}
 	}()
-	return "OK"
+	return nil
 }
