@@ -3,7 +3,7 @@
   import { settings } from "./stores";
 
   type Hotkey = { modifiers: any[]; key: any };
-  let hotkey: Hotkey;
+  let hotkey: Hotkey = { modifiers: [4, 8], key: 65 }; // Win + Shift + A
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
 
@@ -13,18 +13,20 @@
     const value = event.currentTarget.value;
     settings.update((settings) => ({ ...settings, [name]: value }));
   };
+
+  SetToggleHotkey(hotkey.modifiers, hotkey.key);
 </script>
 
 <section>
   <input value={$settings?.ApiKey || ""} type={"password"} on:change={onSettingsChange("ApiKey")} />
   <select multiple size={4}>
-    {#each Object.keys(modifiers) as modifier}
-      <option>{modifiers}</option>
+    {#each Object.entries(modifiers) as [name, value] (name)}
+      <option {value}>{name}</option>
     {/each}
   </select>
   <select multiple size={4}>
-    {#each Object.keys(keys) as key}
-      <option>{key}</option>
+    {#each Object.entries(keys) as [name, value] (name)}
+      <option {value}>{name}</option>
     {/each}
   </select>
 </section>

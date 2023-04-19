@@ -93,6 +93,10 @@ export const flipboard = (node: HTMLElement, { delay = 0, duration = 400, easing
   };
 };
 
+export const autoFocus = (node: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) => {
+  node.focus();
+};
+
 export const focusTrap = (node: HTMLElement, enabled: boolean) => {
   const elemWhitelist = 'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])';
   let elemFirst: HTMLElement;
@@ -142,9 +146,7 @@ export const focusTrap = (node: HTMLElement, enabled: boolean) => {
       enabled = newArgs;
       newArgs ? onInit() : onDestory();
     },
-    destroy: () => {
-      onDestory();
-    }
+    destroy: () => onDestory()
   };
 };
 
@@ -184,9 +186,9 @@ export type Action<T = any> = (
  * @param params - Object that contains two properties {enabled: boolean, callback: (any) => unknown}
  * @see https://svelteui.org/actions/use-click-outside
  */
-export const clickoutside = (
+export const clickOutside = (
   node: HTMLElement,
-  params: { enabled: boolean; callback: (any) => unknown }
+  params: { enabled: boolean; callback: (...params: any) => unknown }
 ): ReturnType<Action> => {
   const { enabled: initialEnabled, callback } = params;
 
@@ -201,8 +203,18 @@ export const clickoutside = (
   update({ enabled: initialEnabled });
   return {
     update,
-    destroy: () => {
-      window.removeEventListener('click', handleOutsideClick);
-    }
+    destroy: () => window.removeEventListener('click', handleOutsideClick)
+  };
+};
+
+export const adjustSize = (node: HTMLTextAreaElement, { rows = 1, maxHeight = 85 } = {}): ReturnType<Action> => {
+  node.setAttribute("rows", String(rows));
+  const onInput = () => {
+    node.style.height = "0px"; // reset height
+    node.style.height = node.scrollHeight && `${Math.min(node.scrollHeight, maxHeight)}px` || "";
+  };
+  node.addEventListener("input", onInput);
+  return {
+    destroy: () => node.removeEventListener("input", onInput)
   };
 };

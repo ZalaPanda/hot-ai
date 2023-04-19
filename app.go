@@ -35,10 +35,11 @@ func (a *App) Greet(name string) string {
 func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	if a.ghk != nil {
 		err := a.ghk.Unregister()
-		runtime.LogDebug(a.ctx, "Unregister old hotkey")
+		runtime.LogDebug(a.ctx, fmt.Sprintf("Unregister old hotkey[%s]", a.ghk.String()))
 		if err != nil {
 			return err
 		}
+		runtime.LogDebug(a.ctx, "Unregistered old hotkey")
 	}
 
 	a.ghk = hotkey.New(mods, key)

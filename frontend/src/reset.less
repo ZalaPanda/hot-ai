@@ -1,0 +1,45 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box; // more-intuitive box-sizing model
+}
+
+* {
+  margin: 0; // remove default margin
+}
+
+html,
+body {
+  height: 100%; // allow percentage-based heights in the application
+}
+
+body {
+  line-height: 1.5; // add accessible line-height
+  -webkit-font-smoothing: antialiased; // improve text rendering
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%; // improve media defaults
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit; // remove built-in form typography styles
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word; // avoid text overflows
+}

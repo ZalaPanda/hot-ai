@@ -2,12 +2,12 @@
   import { createEventDispatcher } from "svelte";
   import { fade } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
-  import { clickoutside, focusTrap } from "./uses";
+  import { clickOutside, focusTrap } from "./uses";
   const dispatch = createEventDispatcher();
 </script>
 
 <div transition:fade={{ easing: cubicOut }}>
-  <section use:focusTrap={true} use:clickoutside={{ enabled: true, callback: () => dispatch("dismiss") }}><slot /></section>
+  <section use:focusTrap={true} use:clickOutside={{ enabled: true, callback: () => dispatch("dismiss") }}><slot /></section>
 </div>
 
 <style lang="less">

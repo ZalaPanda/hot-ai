@@ -19,17 +19,17 @@
     <Settings />
   </Dialog>
 {/if}
-{#if $settings}
-  <h1>settings</h1>
-{:else}
-  <!-- <Dialog /> -->
-  <h1>no settings</h1>
-{/if}
 
 <main>
+  <h1>
+    <img src={bmo} alt={"bmo"} />
+    <span>Chat</span>
+  </h1>
   <Chat />
-  <img src={bmo} alt={"bmo"} />
-  <button on:click|stopPropagation={onToggleSettings}><img src={menu} alt={"menu"} /></button>
+  <h1>
+    <button on:click|stopPropagation={onToggleSettings}><img src={menu} alt={"menu"} /></button>
+    <span>Settings</span>
+  </h1>
 </main>
 
 <style lang="less">
