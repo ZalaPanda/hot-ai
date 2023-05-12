@@ -2,46 +2,74 @@
 
 @font-face {
   font-family: "Nunito";
-  font-style: normal;
-  font-weight: 400;
-  src: local(""),
-    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+  src: url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
 }
 
 @font-face {
   font-family: "SourceCodePro";
-  font-style: normal;
-  font-weight: 400;
-  src: local(""),
-    url("assets/fonts/sourcecodepro-regular.woff2") format("woff2");
-}
-
-html {
-  background-color: rgba(27, 38, 54, 1);
-  text-align: center;
-  color: white;
+  src: url("assets/fonts/sourcecodepro-regular.woff2") format("woff2");
 }
 
 body {
-  margin: 0;
-  color: white;
   font-family: "Nunito", sans-serif;
-}
-
-pre {
-  font-family: "SourceCodePro", monospace;
+  background-color: #1b2636;
+  color: #eeeff1;
+  margin: 20px;
 }
 
 p {
   margin: 4px 0
 }
 
-input {
+input,
+select,
+button {
   font-family: "Nunito", sans-serif;
+  font-weight: bold;
+}
+
+input,
+select {
   border-radius: 4px;
   border: 2px solid #434453;
   padding: 0 8px;
   margin: 2px;
   height: 30px;
   min-width: 80px;
+}
+
+button {
+  background-color: transparent;
+  cursor: pointer;
+  color: #eeeeee;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    color: #ffffff;
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+  }
+
+  img {
+    max-width: 2em;
+    max-height: 2em;
+  }
+}
+
+pre>code {
+  padding: 8px 12px;
+}
+
+code {
+  display: inline-block;
+  font-family: "SourceCodePro", monospace;
+  font-size: 12px;
+  color: #dcc97c;
+  padding: 4px 2px;
+  border-radius: 2px;
 }

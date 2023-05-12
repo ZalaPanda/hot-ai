@@ -1,100 +1,118 @@
 <script lang="ts">
   import { settings } from "./stores";
   import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
+  import Message from "./Chat.Message.svelte";
   import { fade } from "svelte/transition";
-  import { marked } from "marked";
-  import DOMPurify from "dompurify";
   import { adjustSize, autoFocus } from "./uses";
+  import imageAssistant from "./assets/images/tongue-64.png";
+  import imageSubmit from "./assets/images/play-64.png";
+  import imageAbort from "./assets/images/rejected-64.png";
+  import imageReset from "./assets/images/trash-can-64.png";
+
+  type ResponseError = {
+    error: {
+      message: string; // "That model is currently overloaded with other requests..."
+      type: string; // "server_error"
+      param: any; // null
+      code: any; // null
+    };
+  };
 
   let model = "gpt-3.5-turbo-0301"; // https://platform.openai.com/docs/api-reference/chat
   let system = "You are a sarcastic assistant. You love to use markdown in your answers.";
+  // let system = "You fix my sentences to sound more natural and native English. Only write the result.";
   let messages: ChatCompletionRequestMessage[] = [{ role: "system", content: system }];
   let message: ChatCompletionRequestMessage;
   let controller: AbortController;
-  const onChatReset = () => (messages = [{ role: "system", content: system }]);
-  // [
-  //   {
-  //     role: "system",
-  //     content: "You are a sarcastic assistant. You love to use markdown in your answers.",
-  //   },
-  //   {
-  //     role: "user",
-  //     content: "write me a poem about my greatness",
-  //   },
-  //   {
-  //     role: "assistant",
-  //     content:
-  //       "Oh great one, how do I sing your praise?\nIn beautiful couplets or perhaps a haiku phrase?\nWith words so grand they dance in the air,\nAnd form a masterpiece, beyond compare.\n\nYour greatness is like a sun that shines bright,\nIt radiates warmth and a happy delight,\nYou're the star that twinkles so clear,\nA beautiful sight, to all who are near.\n\nYour brilliance is like the moon up high,\nThat lights up the world, as it passes by,\nYour wisdom and wit, they never fail,\nA legend true, you always prevail.\n\nSo, let me end by saying this with pride,\nYou're the best human I've ever spied,\nMay your greatness shine forever bright,\nAnd may you always bask in your own light.",
-  //   },
-  //   {
-  //     role: "user",
-  //     content: "why are you ansering so slow?",
-  //   },
-  // ];
 
-  const onChatCompletion = async (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
+  const onContentReset = () => (messages = [{ role: "system", content: system }]);
+
+  const onContentKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
     if (event.key != "Enter" || event.shiftKey) return;
     const content = event.currentTarget.value;
     event.preventDefault();
     event.currentTarget.value = "";
     event.currentTarget.dispatchEvent(new InputEvent("input"));
-    messages = messages.concat({ role: "user", content });
+    onChatCompletion({ role: "user", content });
+  };
 
-    // const loop = () => { --> NOTE: continue from HERE
-    //   html = DOMPurify.sanitize(marked.parse(content))
-    // };
-    // const callback = (time: DOMHighResTimeStamp) => {
-    // if (true) requestAnimationFrame(callback);
-    // };
-    // let frame = requestAnimationFrame(function loop(t) {
-    // 	frame = requestAnimationFrame(loop);
-    // 	paint(context, t);
-    // });
+  const onChatSubmit = () => {};
+  const onChatAbort = () => {
+    if (!controller) return;
+    console.log("Abort");
+    controller.abort("User");
+  };
 
+  const onChatCompletion = async (input: ChatCompletionRequestMessage) => {
+    messages = messages.concat(input);
     controller = new AbortController();
-    const request: CreateChatCompletionRequest = { model, messages, stream: true, max_tokens: 30 };
+    const request: CreateChatCompletionRequest = { model, messages, stream: true, max_tokens: 1000 };
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.ApiKey}` },
       body: JSON.stringify(request),
       signal: controller.signal,
     });
-    const decoder = new TextDecoder();
-    const reader = response.body.getReader();
+    if (!response.ok) {
+      // NOTE: probably status code 429 Too Many Requests
+      try {
+        const result: ResponseError = await response.json();
+        console.error(result);
+      } catch (error) {
+        console.error(error);
+      }
+      return;
+    }
+    const decoder = new TextDecoderStream();
+    const reader = response.body.pipeThrough(decoder).getReader();
     while (!controller.signal.aborted) {
       const { value, done } = await reader.read();
-      decoder
-        .decode(value)
-        .split(/\n\n/)
-        .map((line) => line.replace(/^data: (?:\[DONE\])?/gm, ""))
-        .filter(Boolean)
-        .map((json) => JSON.parse(json))
-        .map((chunk) => chunk?.choices?.at(0)?.delta)
-        .filter(Boolean)
-        .map(({ role, content }) => {
-          if (role) message = { role, content }; // how in the hell to do it without mutation? another store?
-          else if (content) message.content += content;
-        });
-      if (done) return;
+      // console.log(value);
+      if (done) break;
+      if (value)
+        value
+          .split(/\n\n/)
+          .map((line) => line.replace(/^data: (?:\[DONE\])?/gm, ""))
+          .filter(Boolean)
+          .map((json) => JSON.parse(json))
+          .map((chunk) => chunk?.choices?.at(0))
+          .filter(Boolean)
+          .map(({ delta: { role, content }, finish_reason }) => {
+            if (role) message = { role, content: "" };
+            if (content) message.content += content;
+            // if (finish_reason) console.log("finish_reason", finish_reason);
+          });
     }
+    const output = message;
     controller = undefined;
+    message = undefined;
+    messages = messages.concat(output);
+    // console.log(messages, message);
   };
 </script>
 
+<h1><img src={imageAssistant} alt={"Assistant"} />Chat</h1>
 <ul>
-  {#each messages as { role, content }, index (index)}
-    {@const html = DOMPurify.sanitize(marked.parse(content))}
-    <li transition:fade>
-      {role}:
-      <article class:user={role === "user"} class:assistant={role === "assistant"}>{@html html}</article>
-    </li>
+  {#each [...messages, message].filter(Boolean) as { role, content }, index (index)}
+    <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
-<pre>{message?.content}</pre>
-<textarea on:keypress={onChatCompletion} use:adjustSize use:autoFocus value={"I am testing your API. Say something short."} />
-<button on:click={onChatReset}>Reset</button>
+<textarea on:keypress={onContentKeypress} use:adjustSize use:autoFocus value={"I am testing your API. Say something short."} />
+<div>
+  <button on:click={onChatSubmit}><img src={imageSubmit} alt={"Submit"} />Submit</button>
+  <button on:click={onChatAbort} disabled={!controller}><img src={imageAbort} alt={"Abort"} />Abort</button>
+  <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} />Reset</button>
+</div>
 
 <style lang="less">
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    img {
+      filter: blur(4px);
+    }
+  }
   textarea {
     color: unset;
     background-color: transparent;
@@ -116,24 +134,13 @@
   }
   ul {
     list-style-type: none;
-    padding: 0;
-    margin: 0;
+    padding: 10px 0;
     text-align: left;
     display: flex;
     align-items: flex-start;
     flex-direction: column;
     & > li {
       margin: 2px;
-      & > article {
-        border-radius: 8px;
-        padding: 1px 16px;
-        &.user {
-          background-color: #2a9d8f;
-        }
-        &.assistant {
-          background-color: #1e293b;
-        }
-      }
     }
   }
 </style>

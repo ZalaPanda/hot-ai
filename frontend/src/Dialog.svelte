@@ -24,16 +24,13 @@
     align-items: center;
     justify-content: center;
     & > section {
-      user-select: none;
-      background-color: var(--card-bg);
-      box-shadow: 0 3px 9px var(--shadow-color);
+      background-color: #1b2636;
+      box-shadow: 0 3px 9px #00000022;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: baseline;
       padding: 2rem;
       border-radius: 0.4rem;
-      text-align: center;
-      justify-content: center;
     }
   }
 </style>
