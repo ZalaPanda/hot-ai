@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/danieloliveira085/autostarter"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -26,12 +25,6 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-}
-
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	runtime.LogDebug(a.ctx, "Greet called")
-	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
 // Register global hotkey to hide/show the application
@@ -73,6 +66,7 @@ func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	return nil
 }
 
+// Helper to get Autostart for current executable
 func GetAutostarter() (*autostarter.Autostart, error) {
 	executable, err := os.Executable()
 	if err != nil {
@@ -81,11 +75,12 @@ func GetAutostarter() (*autostarter.Autostart, error) {
 	return autostarter.NewAutostart(
 		autostarter.Shortcut{
 			Name: "hot-ai",
-			Exec: filepath.Base(executable),
+			Exec: executable,
 		},
 		autostarter.DefaultIcon), nil
 }
 
+// Check if there is an autostart already set
 func (a *App) GetAutostarterEnabled() (bool, error) {
 	as, err := GetAutostarter()
 	if err != nil {
@@ -94,6 +89,7 @@ func (a *App) GetAutostarterEnabled() (bool, error) {
 	return as.IsEnabled(), nil
 }
 
+// Adds/removes autostart
 func (a *App) SetAutostarterEnabled(enable bool) error {
 	as, err := GetAutostarter()
 	if err != nil {

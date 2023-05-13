@@ -14,10 +14,6 @@ export function GetModifiers() {
   return window['go']['main']['App']['GetModifiers']();
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
-}
-
 export function SetAutostarterEnabled(arg1) {
   return window['go']['main']['App']['SetAutostarterEnabled'](arg1);
 }
