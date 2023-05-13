@@ -1,9 +1,10 @@
 <script lang="ts">
   import imageSettings from "./assets/images/options-64.png";
   import { settings } from "./stores";
+  import Chat from "./Chat.svelte";
   import Dialog from "./Dialog.svelte";
   import Settings from "./Settings.svelte";
-  import Chat from "./Chat.svelte";
+  import Toaster from "./Toaster.svelte";
 
   let isSettingsVisible = false;
   $: if (!$settings) isSettingsVisible = true;
@@ -19,6 +20,7 @@
 
 <Chat />
 <button on:click|stopPropagation={onToggleSettings}><img src={imageSettings} alt={"menu"} />Settings</button>
+<Toaster />
 
 <style lang="less">
 </style>

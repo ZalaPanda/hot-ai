@@ -25,7 +25,7 @@
     justify-content: center;
     & > section {
       background-color: #1b2636;
-      box-shadow: 0 3px 9px #00000022;
+      box-shadow: 0 3px 9px #00000066;
       display: flex;
       flex-direction: column;
       align-items: baseline;

@@ -8,6 +8,7 @@
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
   import imageReset from "./assets/images/trash-can-64.png";
+  import { dispatchError } from "./Toaster.svelte";
 
   type ResponseError = {
     error: {
@@ -39,55 +40,58 @@
   const onChatSubmit = () => {};
   const onChatAbort = () => {
     if (!controller) return;
-    console.log("Abort");
-    controller.abort("User");
+    controller.abort();
+  };
+
+  const extractErrorMessage = async (response: Response) => {
+    try {
+      const result: ResponseError = await response.json();
+      return result.error.message;
+    } catch {
+      return response.statusText;
+    }
   };
 
   const onChatCompletion = async (input: ChatCompletionRequestMessage) => {
-    messages = messages.concat(input);
-    controller = new AbortController();
-    const request: CreateChatCompletionRequest = { model, messages, stream: true, max_tokens: 1000 };
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.ApiKey}` },
-      body: JSON.stringify(request),
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      // NOTE: probably status code 429 Too Many Requests
-      try {
-        const result: ResponseError = await response.json();
-        console.error(result);
-      } catch (error) {
-        console.error(error);
+    try {
+      messages = messages.concat(input);
+      controller = new AbortController();
+      const request: CreateChatCompletionRequest = { model, messages, stream: true, max_tokens: 1000 };
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.ApiKey}` },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`${response.status} Request failed: ${extractErrorMessage(response)}`);
+      const decoder = new TextDecoderStream();
+      const reader = response.body.pipeThrough(decoder).getReader();
+      while (!controller.signal.aborted) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value)
+          value
+            .split(/\n\n/)
+            .map((line) => line.replace(/^data: (?:\[DONE\])?/gm, ""))
+            .filter(Boolean)
+            .map((json) => JSON.parse(json))
+            .map((chunk) => chunk?.choices?.at(0))
+            .filter(Boolean)
+            .map(({ delta: { role, content }, finish_reason }) => {
+              if (role) message = { role, content: "" };
+              if (content) message.content += content;
+              // if (finish_reason) console.log("finish_reason", finish_reason);
+            });
       }
-      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.code === DOMException.ABORT_ERR) return; // NOTE: The user aborted a request.
+      dispatchError(error);
+    } finally {
+      const output = message;
+      controller = undefined;
+      message = undefined;
+      if (output) messages = messages.concat(output);
     }
-    const decoder = new TextDecoderStream();
-    const reader = response.body.pipeThrough(decoder).getReader();
-    while (!controller.signal.aborted) {
-      const { value, done } = await reader.read();
-      // console.log(value);
-      if (done) break;
-      if (value)
-        value
-          .split(/\n\n/)
-          .map((line) => line.replace(/^data: (?:\[DONE\])?/gm, ""))
-          .filter(Boolean)
-          .map((json) => JSON.parse(json))
-          .map((chunk) => chunk?.choices?.at(0))
-          .filter(Boolean)
-          .map(({ delta: { role, content }, finish_reason }) => {
-            if (role) message = { role, content: "" };
-            if (content) message.content += content;
-            // if (finish_reason) console.log("finish_reason", finish_reason);
-          });
-    }
-    const output = message;
-    controller = undefined;
-    message = undefined;
-    messages = messages.concat(output);
-    // console.log(messages, message);
   };
 </script>
 
@@ -97,7 +101,7 @@
     <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
-<textarea on:keypress={onContentKeypress} use:adjustSize use:autoFocus value={"I am testing your API. Say something short."} />
+<textarea on:keypress={onContentKeypress} use:adjustSize use:autoFocus value={"Tell me a joke."} />
 <div>
   <button on:click={onChatSubmit}><img src={imageSubmit} alt={"Submit"} />Submit</button>
   <button on:click={onChatAbort} disabled={!controller}><img src={imageAbort} alt={"Abort"} />Abort</button>
@@ -110,7 +114,7 @@
     align-items: center;
     gap: 8px;
     img {
-      filter: blur(4px);
+      // filter: blur(4px);
     }
   }
   textarea {
@@ -138,7 +142,7 @@
     text-align: left;
     display: flex;
     align-items: flex-start;
-    flex-direction: column;
+    flex-direction: column-reverse;
     & > li {
       margin: 2px;
     }
