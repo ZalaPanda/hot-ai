@@ -24,8 +24,8 @@
 
   type Preset = { name: string; system: string; image: string };
   const presets: Preset[] = [
-    { name: "Colleague", system: "You are my very helpful but also very sarcastic colleague. Use markdown in your answers.", image: imageColleague },
-    { name: "Teacher", system: "You fix my sentences to sound more natural and native English.", image: imageTeacher },
+    { name: "Colleague", system: "You are my sarcastic colleague and you love to joke. Use markdown in your answers.", image: imageColleague },
+    { name: "Teacher", system: "You fix my sentences to sound more natural and native English. Reply only the corrected sentences.", image: imageTeacher },
     { name: "Geek", system: "You are a digital-technology expert and you know everything about programming.", image: imageGeek },
   ];
 
@@ -48,21 +48,15 @@
     messageContainer.scrollTo(0, messageContainer.scrollHeight);
   });
 
-  const onLoadPreset = (selectedPreset: Preset) => () => (preset = selectedPreset);
-  const onContentReset = () => {
-    messages = [];
-  };
+  const onContentReset = () => (messages = []);
 
   const onContentKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
     if (event.key != "Enter" || event.shiftKey) return;
-    const content = event.currentTarget.value;
     event.preventDefault();
-    event.currentTarget.value = "";
-    event.currentTarget.dispatchEvent(new InputEvent("input"));
-    onChatCompletion({ role: "user", content });
+    onChatCompletion();
   };
 
-  const onChatSubmit = async () => {};
+  const onLoadPreset = (selectedPreset: Preset) => () => (preset = selectedPreset) || onContentReset();
 
   const onChatAbort = () => {
     if (controller) controller.abort();
@@ -77,14 +71,18 @@
     }
   };
 
-  const onChatCompletion = async (input: ChatCompletionRequestMessage) => {
+  const onChatCompletion = async () => {
     try {
+      const content = contentTextarea.value;
+      contentTextarea.value = "";
+      contentTextarea.dispatchEvent(new InputEvent("input"));
+      if (content) messages = messages.concat({ role: "user", content });
+
       if (controller) controller.abort();
       controller = new AbortController();
-      messages = messages.concat(input);
       const request: CreateChatCompletionRequest = {
         model: "gpt-3.5-turbo-0301", // https://platform.openai.com/docs/api-reference/chat,
-        messages: messages.concat({ role: "system", content: preset.system }),
+        messages: [{ role: "system", content: preset.system }, ...messages],
         stream: true,
         max_tokens: 1000,
       };
@@ -142,7 +140,7 @@
 </ul>
 <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
 <div>
-  <button on:click={onChatSubmit}><img src={imageSubmit} alt={"Submit"} />Submit</button>
+  <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} />Submit</button>
   <button on:click={onChatAbort} disabled={!controller}><img src={imageAbort} alt={"Abort"} />Abort</button>
   <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} />Reset</button>
 </div>
