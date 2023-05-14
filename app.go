@@ -30,21 +30,23 @@ func (a *App) startup(ctx context.Context) {
 // Register global hotkey to hide/show the application
 func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	if a.ghk != nil {
-		err := a.ghk.Unregister()
 		runtime.LogDebug(a.ctx, fmt.Sprintf("Unregister old hotkey[%s]", a.ghk.String()))
+		err := a.ghk.Unregister()
 		if err != nil {
 			return err
 		}
 		runtime.LogDebug(a.ctx, "Unregistered old hotkey")
+		a.ghk = nil
 	}
 
-	a.ghk = hotkey.New(mods, key)
-	runtime.LogDebug(a.ctx, fmt.Sprintf("Register hotkey[%s]", a.ghk.String()))
-	err := a.ghk.Register()
+	ghk := hotkey.New(mods, key)
+	runtime.LogDebug(a.ctx, fmt.Sprintf("Register hotkey[%s]", ghk.String()))
+	err := ghk.Register()
 	if err != nil {
 		return err
 	}
 	runtime.LogDebug(a.ctx, "Registered hotkey")
+	a.ghk = ghk
 
 	go func() {
 		visible := true

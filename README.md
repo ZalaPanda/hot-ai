@@ -7,4 +7,14 @@
 Development: `wails dev`  
 Building: `wails build -clean -upx -webview2 embed`
 
-TODO: *oh boy, ...*
+![Screenshot](screenshot.png)
+
+> Icons used during development: [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/bearicons/external-bearicons-outline-color-bearicons)
+
+## ideas
+
+- [ ] Save chats in [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB) and add search bar
+- [ ] Save modified presets + create new ones + upload avatar too
+- [ ] Redesign button layout
+- [ ] [Frameless](https://wails.io/docs/v2.4.0/guides/frameless) appearance
+- [ ] Generate icons with [DALL-E](https://labs.openai.com/)

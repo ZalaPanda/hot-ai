@@ -1,14 +1,17 @@
 <script lang="ts">
-  import { settings } from "./stores";
-  import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
-  import Message from "./Chat.Message.svelte";
+  import { beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
+  import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
+  import { settings } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
-  import imageAssistant from "./assets/images/tongue-64.png";
+  import { dispatchError } from "./Toaster.svelte";
+  import Message from "./Chat.Message.svelte";
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
   import imageReset from "./assets/images/trash-can-64.png";
-  import { dispatchError } from "./Toaster.svelte";
+  import imageColleague from "./assets/images/neutral-64.png";
+  import imageTeacher from "./assets/images/tongue-64.png";
+  import imageGeek from "./assets/images/cold-64.png";
 
   type ResponseError = {
     error: {
@@ -19,14 +22,36 @@
     };
   };
 
-  let model = "gpt-3.5-turbo-0301"; // https://platform.openai.com/docs/api-reference/chat
-  let system = "You are a sarcastic assistant. You love to use markdown in your answers.";
-  // let system = "You fix my sentences to sound more natural and native English. Only write the result.";
-  let messages: ChatCompletionRequestMessage[] = [{ role: "system", content: system }];
+  type Preset = { name: string; system: string; image: string };
+  const presets: Preset[] = [
+    { name: "Colleague", system: "You are my very helpful but also very sarcastic colleague. Use markdown in your answers.", image: imageColleague },
+    { name: "Teacher", system: "You fix my sentences to sound more natural and native English.", image: imageTeacher },
+    { name: "Geek", system: "You are a digital-technology expert and you know everything about programming.", image: imageGeek },
+  ];
+
+  let messageContainer: HTMLElement;
+  let contentTextarea: HTMLTextAreaElement;
+
+  let preset = presets.at(0);
+  let messages: ChatCompletionRequestMessage[] = [];
   let message: ChatCompletionRequestMessage;
   let controller: AbortController;
+  let autoscroll: boolean;
 
-  const onContentReset = () => (messages = [{ role: "system", content: system }]);
+  beforeUpdate(() => {
+    if (!messageContainer) return;
+    const { clientHeight, scrollTop, scrollHeight } = messageContainer;
+    autoscroll = clientHeight + scrollTop > scrollHeight - 40;
+  });
+  afterUpdate(() => {
+    if (!autoscroll) return;
+    messageContainer.scrollTo(0, messageContainer.scrollHeight);
+  });
+
+  const onLoadPreset = (selectedPreset: Preset) => () => (preset = selectedPreset);
+  const onContentReset = () => {
+    messages = [];
+  };
 
   const onContentKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
     if (event.key != "Enter" || event.shiftKey) return;
@@ -37,10 +62,10 @@
     onChatCompletion({ role: "user", content });
   };
 
-  const onChatSubmit = () => {};
+  const onChatSubmit = async () => {};
+
   const onChatAbort = () => {
-    if (!controller) return;
-    controller.abort();
+    if (controller) controller.abort();
   };
 
   const extractErrorMessage = async (response: Response) => {
@@ -54,12 +79,18 @@
 
   const onChatCompletion = async (input: ChatCompletionRequestMessage) => {
     try {
-      messages = messages.concat(input);
+      if (controller) controller.abort();
       controller = new AbortController();
-      const request: CreateChatCompletionRequest = { model, messages, stream: true, max_tokens: 1000 };
+      messages = messages.concat(input);
+      const request: CreateChatCompletionRequest = {
+        model: "gpt-3.5-turbo-0301", // https://platform.openai.com/docs/api-reference/chat,
+        messages: messages.concat({ role: "system", content: preset.system }),
+        stream: true,
+        max_tokens: 1000,
+      };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.ApiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.apiKey}` },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
@@ -91,17 +122,25 @@
       controller = undefined;
       message = undefined;
       if (output) messages = messages.concat(output);
+      contentTextarea.focus();
     }
   };
 </script>
 
-<h1><img src={imageAssistant} alt={"Assistant"} />Chat</h1>
-<ul>
+<h1>
+  {#each presets as { name, system, image }}
+    {@const active = preset.name === name}
+    <button on:click={onLoadPreset({ name, system, image })}><img src={image} class:active alt={name} /></button>
+  {/each}
+  {preset.name}
+</h1>
+<textarea use:adjustSize bind:value={preset.system} />
+<ul bind:this={messageContainer}>
   {#each [...messages, message].filter(Boolean) as { role, content }, index (index)}
     <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
-<textarea on:keypress={onContentKeypress} use:adjustSize use:autoFocus value={"Tell me a joke."} />
+<textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
 <div>
   <button on:click={onChatSubmit}><img src={imageSubmit} alt={"Submit"} />Submit</button>
   <button on:click={onChatAbort} disabled={!controller}><img src={imageAbort} alt={"Abort"} />Abort</button>
@@ -113,8 +152,26 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    img {
-      // filter: blur(4px);
+    & > button > img {
+      filter: blur(4px);
+      &:hover,
+      &.active {
+        filter: none;
+      }
+    }
+  }
+  ul {
+    list-style-type: none;
+    scroll-behavior: smooth;
+    padding: 10px 0;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    overflow: auto;
+    flex: 1 1;
+    & > li {
+      margin: 2px;
     }
   }
   textarea {
@@ -135,16 +192,5 @@
     min-width: 600px;
     font-family: "Nunito", sans-serif;
     font-size: 1em;
-  }
-  ul {
-    list-style-type: none;
-    padding: 10px 0;
-    text-align: left;
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column-reverse;
-    & > li {
-      margin: 2px;
-    }
   }
 </style>
