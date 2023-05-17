@@ -11,6 +11,7 @@
 html,
 body {
   height: 100%; // allow percentage-based heights in the application
+  overflow: hidden;
 }
 
 body {
@@ -25,6 +26,9 @@ canvas,
 svg {
   display: block;
   max-width: 100%; // improve media defaults
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 input,

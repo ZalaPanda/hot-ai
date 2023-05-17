@@ -166,7 +166,7 @@
     display: flex;
     align-items: flex-start;
     flex-direction: column;
-    overflow: auto;
+    overflow-y: auto;
     flex: 1 1;
     & > li {
       margin: 2px;
