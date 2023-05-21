@@ -17,23 +17,16 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "hot-ai",
-		Width:     1024,
-		Height:    768,
-		MinWidth:  600,
-		MinHeight: 300,
-		// Frameless:         true,
-		// HideWindowOnClose: true,
-		// DisableResize:     true,
-		// AlwaysOnTop:       true,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
+		Title:            "hot-ai",
+		MinWidth:         600,
+		MinHeight:        400,
+		Frameless:        true,
+		StartHidden:      true,
+		AssetServer:      &assetserver.Options{Assets: assets},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
-		Bind: []interface{}{
-			app,
-		},
+		OnBeforeClose:    app.beforeClose,
+		Bind:             []interface{}{app},
 	})
 
 	if err != nil {

@@ -29,8 +29,8 @@
       display: flex;
       flex-direction: column;
       align-items: baseline;
-      padding: 2rem;
-      border-radius: 0.4rem;
+      padding: 18px 24px;
+      border-radius: 20px;
     }
   }
 </style>
