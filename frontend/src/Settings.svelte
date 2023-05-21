@@ -104,8 +104,7 @@
       await WindowSetAlwaysOnTop(alwaysOnTop);
       if (bounds) {
         const [x, y, w, h] = bounds;
-        LogDebug(`Bounds: ${x} ${y} ${w} ${h}`);
-        WindowSetPosition(x, x);
+        WindowSetPosition(x, y);
         WindowSetSize(w, h);
       }
       WindowShow();
