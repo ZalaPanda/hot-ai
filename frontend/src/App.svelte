@@ -4,6 +4,5 @@
   import Toaster from "./Toaster.svelte";
 </script>
 
-<Chat />
+<Chat><Settings /></Chat>
 <Toaster />
-<Settings />

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { beforeUpdate, afterUpdate } from "svelte";
+  import { beforeUpdate, afterUpdate, tick } from "svelte";
   import { fade } from "svelte/transition";
   import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
   import { settings } from "./stores";
@@ -31,6 +31,7 @@
 
   let messageContainer: HTMLElement;
   let contentTextarea: HTMLTextAreaElement;
+  let abortButton: HTMLButtonElement;
 
   let preset = presets.at(0);
   let messages: ChatCompletionRequestMessage[] = [];
@@ -48,7 +49,10 @@
     messageContainer.scrollTo(0, messageContainer.scrollHeight);
   });
 
-  const onContentReset = () => (messages = []);
+  const onContentReset = () => {
+    messages = [];
+    contentTextarea.select();
+  };
 
   const onContentKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
     if (event.key != "Enter" || event.shiftKey) return;
@@ -56,7 +60,10 @@
     onChatCompletion();
   };
 
-  const onLoadPreset = (selectedPreset: Preset) => () => (preset = selectedPreset) || onContentReset();
+  const onLoadPreset = (selectedPreset: Preset) => () => {
+    preset = selectedPreset;
+    onContentReset();
+  };
 
   const onChatAbort = () => {
     if (controller) controller.abort();
@@ -80,6 +87,8 @@
 
       if (controller) controller.abort();
       controller = new AbortController();
+      await tick();
+      abortButton.focus();
       const request: CreateChatCompletionRequest = {
         model: "gpt-3.5-turbo-0301", // https://platform.openai.com/docs/api-reference/chat,
         messages: [{ role: "system", content: preset.system }, ...messages],
@@ -120,7 +129,8 @@
       controller = undefined;
       message = undefined;
       if (output) messages = messages.concat(output);
-      contentTextarea.focus();
+      await tick();
+      contentTextarea.select();
     }
   };
 </script>
@@ -132,24 +142,32 @@
   {/each}
   {preset.name}
 </h1>
-<textarea use:adjustSize bind:value={preset.system} />
+<section>
+  <textarea use:adjustSize bind:value={preset.system} />
+  <slot />
+</section>
 <ul bind:this={messageContainer}>
   {#each [...messages, message].filter(Boolean) as { role, content }, index (index)}
     <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
-<textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
-<div>
-  <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} />Submit</button>
-  <button on:click={onChatAbort} disabled={!controller}><img src={imageAbort} alt={"Abort"} />Abort</button>
-  <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} />Reset</button>
-</div>
+<section>
+  <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
+  <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>
+  <button on:click={onChatAbort} disabled={!controller} bind:this={abortButton}><img src={imageAbort} alt={"Abort"} /></button>
+  <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} /></button>
+</section>
 
 <style lang="less">
   h1 {
+    --wails-draggable: drag;
     display: flex;
     align-items: center;
     gap: 8px;
+    border-radius: 30px;
+    background-color: #2e405c;
+    user-select: none;
+    -webkit-user-select: none;
     & > button > img {
       filter: blur(4px);
       &:hover,
@@ -161,12 +179,12 @@
   ul {
     list-style-type: none;
     scroll-behavior: smooth;
-    padding: 10px 0;
+    padding: unset;
     text-align: left;
     display: flex;
     align-items: flex-start;
     flex-direction: column;
-    overflow: auto;
+    overflow-y: auto;
     flex: 1 1;
     & > li {
       margin: 2px;
@@ -187,8 +205,21 @@
       filter: opacity(0.6);
       cursor: "auto";
     }
-    min-width: 600px;
     font-family: "Nunito", sans-serif;
     font-size: 1em;
+  }
+  button {
+    padding: 2px;
+  }
+  section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    & > textarea {
+      flex: 1 1;
+    }
+    & > button {
+      flex: 0 0;
+    }
   }
 </style>

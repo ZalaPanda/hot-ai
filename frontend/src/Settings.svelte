@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { GetKeys, GetModifiers, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
+  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowSetPosition, WindowSetSize, WindowShow, LogDebug } from "../wailsjs/runtime";
   import { settings, type HotKey } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
@@ -15,18 +17,6 @@
 
   let modifiersSelect: HTMLSelectElement;
   let keySelect: HTMLSelectElement;
-
-  (async () => {
-    try {
-      const { apiKey, hotKey } = $settings || {};
-      if (!apiKey) isVisible = true;
-      if (!isWails) return;
-      [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
-      if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-    } catch (error) {
-      dispatchError(error);
-    }
-  })();
 
   const onToggleSettings = () => (isVisible = !isVisible);
 
@@ -52,6 +42,28 @@
       dispatchError(error);
     }
   };
+
+  const onToggleMaximise = async () => {
+    try {
+      const isMaximized = !(await WindowIsMaximised());
+      if (isMaximized) await WindowMaximise();
+      else await WindowUnmaximise();
+      settings.update((settings) => ({ ...settings, isMaximized }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  const onToggleAlwaysOnTop = async () => {
+    try {
+      const alwaysOnTop = !$settings.alwaysOnTop;
+      await WindowSetAlwaysOnTop(alwaysOnTop);
+      settings.update((settings) => ({ ...settings, alwaysOnTop }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
   const onClearHotKey = () => {
     modifiersSelect.value = undefined;
     keySelect.value = undefined;
@@ -66,35 +78,80 @@
       console.error(error);
     }
   };
+
+  const onHandleKeydown = (event: KeyboardEvent) => {
+    if (event.key === "F11") return onToggleMaximise();
+    if (event.key === "F12") return onToggleAlwaysOnTop();
+  };
+
+  const onHandleSaveBounds = (bounds: [number, number, number, number]) => {
+    settings.update((settings) => ({ ...settings, bounds }));
+  };
+
+  onMount(async () => {
+    try {
+      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings || {};
+      if (!apiKey) isVisible = true;
+      if (!isWails) return;
+
+      document.addEventListener("keydown", onHandleKeydown);
+      EventsOn("save-bounds", onHandleSaveBounds);
+
+      [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
+      if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
+      if (isMaximized) await WindowMaximise();
+      else await WindowUnmaximise();
+      await WindowSetAlwaysOnTop(alwaysOnTop);
+      if (bounds) {
+        const [x, y, w, h] = bounds;
+        LogDebug(`Bounds: ${x} ${y} ${w} ${h}`);
+        WindowSetPosition(x, x);
+        WindowSetSize(w, h);
+      }
+      WindowShow();
+
+      return () => {
+        document.removeEventListener("keydown", onHandleKeydown);
+        EventsOff("save-bounds");
+      };
+    } catch (error) {
+      dispatchError(error);
+    }
+  });
 </script>
 
-<button on:click|stopPropagation={onToggleSettings}><img src={imageSettings} alt={"menu"} />Settings</button>
-
+<button on:click|stopPropagation={onToggleSettings}><img src={imageSettings} alt={"menu"} /></button>
 {#if isVisible}
   <Dialog on:dismiss={onToggleSettings}>
     <h1>Settings</h1>
+    <div>OpenAI API key:</div>
     <label>
-      OpenAI API key:
       <input value={$settings?.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
     </label>
+    <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings?.hotKey}>Clear</button></div>
     <label>
-      Global hotkey:
-      <select multiple size={4} bind:this={modifiersSelect} on:change={onChangeHotKey}>
+      <select multiple size={4} bind:this={modifiersSelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(modifiers) as [name, value] (name)}
           <option {value} selected={$settings?.hotKey?.modifiers?.includes(value)}>{name}</option>
         {/each}
       </select>
-      <select size={4} bind:this={keySelect} on:change={onChangeHotKey}>
+      <select size={4} bind:this={keySelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(keys) as [name, value] (name)}
           <option {value} selected={$settings?.hotKey?.key === value}>{name}</option>
         {/each}
       </select>
-      <button on:click={onClearHotKey} disabled={!$settings?.hotKey}>Clear</button>
     </label>
     <label>
-      Auto-start with system:
-      <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} />
-      {autostarted ? "active" : "inactive"}
+      <input type={"checkbox"} checked={$settings.isMaximized} on:change={onToggleMaximise} disabled={!isWails} />
+      Maximized (<kbd>F11</kbd>)
+    </label>
+    <label>
+      <input type={"checkbox"} checked={$settings.alwaysOnTop} on:change={onToggleAlwaysOnTop} disabled={!isWails} />
+      Always on Top (<kbd>F12</kbd>)
+    </label>
+    <label>
+      <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} disabled={!isWails} />
+      Auto-start with system
     </label>
   </Dialog>
 {/if}
@@ -104,6 +161,7 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
+    margin-bottom: 4px;
   }
   select {
     height: 100px;

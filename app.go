@@ -27,6 +27,14 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) beforeClose(ctx context.Context) (prevent bool) {
+	x, y := runtime.WindowGetPosition(a.ctx)
+	w, h := runtime.WindowGetSize(a.ctx)
+	bounds := [4]int{x, y, w, h}
+	runtime.EventsEmit(a.ctx, "save-bounds", bounds) // TODO: check if this is sync!
+	return false
+}
+
 // Register global hotkey to hide/show the application
 func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	if a.ghk != nil {

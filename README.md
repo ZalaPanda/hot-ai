@@ -15,6 +15,8 @@ Building: `wails build -clean -upx -webview2 embed`
 
 - [ ] Save chats in [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB) and add search bar
 - [ ] Save modified presets + create new ones + upload avatar too
-- [ ] Redesign button layout
-- [ ] [Frameless](https://wails.io/docs/v2.4.0/guides/frameless) appearance
+- [x] Redesign button layout
+- [x] [Frameless](https://wails.io/docs/v2.4.0/guides/frameless) appearance
 - [ ] Generate icons with [DALL-E](https://labs.openai.com/)
+- [ ] Check [releases](https://api.github.com/repos/ZalaPanda/hot-ai/releases) to check last version
+- [ ] Create tooltip component

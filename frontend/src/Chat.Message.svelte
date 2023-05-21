@@ -2,36 +2,38 @@
 
 <script lang="ts">
   import { marked } from "marked";
+  import { ClipboardSetText } from "../wailsjs/runtime";
   import DOMPurify from "dompurify";
   import imageClipboard from "./assets/images/clipboard-64.png";
 
   export let role: string;
   export let content: string;
-  let hover: boolean;
 
   const options: marked.MarkedOptions = { headerIds: false, mangle: false, breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
   $: html = (content && DOMPurify.sanitize(marked.parse(content, options))) || undefined;
 
-  const onToggleHover = (value: boolean) => () => (hover = value);
-  const onCopyToClipboard = () => navigator.clipboard.writeText(content); // NOTE: available only in secure contexts
+  const onCopyToClipboard = () => ClipboardSetText(content);
 </script>
 
-<article class:user={role === "user"} class:assistant={role === "assistant"} on:mouseenter={onToggleHover(true)} on:mouseleave={onToggleHover(false)}>
-  <button on:click={onCopyToClipboard} class:hover><img src={imageClipboard} alt={"Copy to clipboard"} /></button>
+<article class:user={role === "user"} class:assistant={role === "assistant"}>
+  <button on:click={onCopyToClipboard}><img src={imageClipboard} alt={"Copy to clipboard"} /></button>
   {@html html}
 </article>
 
 <style lang="less">
+  article:hover > button > img {
+    visibility: visible;
+  }
   button {
-    display: none;
     position: absolute;
+    top: 0px;
     right: 0px;
-    bottom: 0px;
-    width: 28px;
-    height: 28px;
-    margin: 9px;
-    &.hover {
-      display: block;
+    padding: 4px 2px;
+    & > img {
+      visibility: hidden;
+    }
+    &:focus > img {
+      visibility: visible;
     }
   }
   article {
