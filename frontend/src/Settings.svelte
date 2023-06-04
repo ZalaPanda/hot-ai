@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
-  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowSetPosition, WindowSetSize, WindowShow, LogDebug } from "../wailsjs/runtime";
+  import { GetKeys, GetModifiers, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
+  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow } from "../wailsjs/runtime";
   import { settings, type HotKey } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
@@ -46,8 +46,8 @@
   const onToggleMaximise = async () => {
     try {
       const isMaximized = !(await WindowIsMaximised());
-      if (isMaximized) await WindowMaximise();
-      else await WindowUnmaximise();
+      if (isMaximized) WindowMaximise();
+      else WindowUnmaximise();
       settings.update((settings) => ({ ...settings, isMaximized }));
     } catch (error) {
       dispatchError(error);
@@ -57,7 +57,7 @@
   const onToggleAlwaysOnTop = async () => {
     try {
       const alwaysOnTop = !$settings.alwaysOnTop;
-      await WindowSetAlwaysOnTop(alwaysOnTop);
+      WindowSetAlwaysOnTop(alwaysOnTop);
       settings.update((settings) => ({ ...settings, alwaysOnTop }));
     } catch (error) {
       dispatchError(error);
@@ -99,14 +99,10 @@
 
       [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
       if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-      if (isMaximized) await WindowMaximise();
-      else await WindowUnmaximise();
-      await WindowSetAlwaysOnTop(alwaysOnTop);
-      if (bounds) {
-        const [x, y, w, h] = bounds;
-        WindowSetPosition(x, y);
-        WindowSetSize(w, h);
-      }
+      if (bounds) await SetWindowBounds(bounds);
+      if (isMaximized) WindowMaximise();
+      else WindowUnmaximise();
+      WindowSetAlwaysOnTop(alwaysOnTop);
       WindowShow();
 
       return () => {
