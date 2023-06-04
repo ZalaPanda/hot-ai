@@ -17,6 +17,7 @@
     bottom: 0;
     left: 0;
     right: 0;
+    z-index: 1;
     background-color: #00000022;
     backdrop-filter: blur(2px);
     display: flex;
