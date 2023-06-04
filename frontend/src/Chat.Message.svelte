@@ -25,10 +25,10 @@
     visibility: visible;
   }
   button {
-    position: absolute;
-    top: 0px;
-    right: 0px;
     padding: 4px 2px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
     & > img {
       visibility: hidden;
     }
