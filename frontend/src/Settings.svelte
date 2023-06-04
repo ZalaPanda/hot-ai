@@ -90,7 +90,7 @@
 
   onMount(async () => {
     try {
-      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings || {};
+      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
       if (!apiKey) isVisible = true;
       if (!isWails) return;
 
@@ -125,18 +125,18 @@
     <h1>Settings</h1>
     <div>OpenAI API key:</div>
     <label>
-      <input value={$settings?.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
+      <input value={$settings.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
     </label>
-    <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings?.hotKey}>Clear</button></div>
+    <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings.hotKey}>Clear</button></div>
     <label>
       <select multiple size={4} bind:this={modifiersSelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(modifiers) as [name, value] (name)}
-          <option {value} selected={$settings?.hotKey?.modifiers?.includes(value)}>{name}</option>
+          <option {value} selected={$settings.hotKey?.modifiers?.includes(value)}>{name}</option>
         {/each}
       </select>
       <select size={4} bind:this={keySelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(keys) as [name, value] (name)}
-          <option {value} selected={$settings?.hotKey?.key === value}>{name}</option>
+          <option {value} selected={$settings.hotKey?.key === value}>{name}</option>
         {/each}
       </select>
     </label>
