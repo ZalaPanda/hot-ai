@@ -88,7 +88,7 @@
     settings.update((settings) => ({ ...settings, bounds }));
   };
 
-  onMount(async () => {
+  onMount(() => {
     try {
       const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
       if (!apiKey) isVisible = true;
@@ -97,21 +97,23 @@
       document.addEventListener("keydown", onHandleKeydown);
       EventsOn("save-bounds", onHandleSaveBounds);
 
-      [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
-      if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-      if (bounds) await SetWindowBounds(bounds);
       if (isMaximized) WindowMaximise();
       else WindowUnmaximise();
       WindowSetAlwaysOnTop(alwaysOnTop);
       WindowShow();
 
-      return () => {
-        document.removeEventListener("keydown", onHandleKeydown);
-        EventsOff("save-bounds");
-      };
+      (async () => {
+        [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
+        if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
+        if (bounds) await SetWindowBounds(bounds);
+      })();
     } catch (error) {
       dispatchError(error);
     }
+    return () => {
+      document.removeEventListener("keydown", onHandleKeydown);
+      EventsOff("save-bounds");
+    };
   });
 </script>
 
