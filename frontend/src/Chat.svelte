@@ -5,6 +5,7 @@
   import { settings } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
+  import Search from "./Chat.Search.svelte";
   import Message from "./Chat.Message.svelte";
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
@@ -90,18 +91,18 @@
       await tick();
       abortButton.focus();
       const request: CreateChatCompletionRequest = {
-        model: "gpt-3.5-turbo-0301", // https://platform.openai.com/docs/api-reference/chat,
+        model: "gpt-3.5-turbo", // https://platform.openai.com/docs/api-reference/chat,
         messages: [{ role: "system", content: preset.system }, ...messages],
         stream: true,
         max_tokens: 1000,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.apiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings.apiKey}` },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
-      if (!response.ok) throw new Error(`${response.status} Request failed: ${extractErrorMessage(response)}`);
+      if (!response.ok) throw new Error(`${response.status} Request failed: ${await extractErrorMessage(response)}`);
       const decoder = new TextDecoderStream();
       const reader = response.body.pipeThrough(decoder).getReader();
       while (!controller.signal.aborted) {
@@ -151,6 +152,7 @@
     <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
+<Search />
 <section>
   <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
   <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>

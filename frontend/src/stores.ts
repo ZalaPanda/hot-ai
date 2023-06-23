@@ -11,3 +11,5 @@ export interface Settings {
 
 export const settings = writable<Settings>(JSON.parse(localStorage.getItem("settings")) ?? {});
 settings.subscribe(settings => localStorage.setItem("settings", JSON.stringify(settings)));
+
+export const search = writable<string | undefined>(undefined);
