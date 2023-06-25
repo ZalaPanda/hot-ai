@@ -5,13 +5,28 @@
   import { ClipboardSetText } from "../wailsjs/runtime";
   import DOMPurify from "dompurify";
   import imageClipboard from "./assets/images/clipboard-64.png";
+  import { search } from "./stores";
 
   export let role: string;
   export let content: string;
 
   const options: marked.MarkedOptions = { headerIds: false, mangle: false, breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
-  $: html = (content && DOMPurify.sanitize(marked.parse(content, options))) || undefined;
 
+  $: expression = $search ? RegExp(new Option($search).innerHTML, "ig") : undefined;
+  $: html =
+    (content &&
+      marked.parse(content, {
+        ...options,
+        walkTokens: (token: marked.Token) => {
+          if ("tokens" in token) return;
+          if ("text" in token) token["text"] = token["text"].replace(expression, "<mark>$&</mark>");
+        },
+        hooks: {
+          preprocess: (markdown: string) => markdown,
+          postprocess: (html: string) => DOMPurify.sanitize(html),
+        },
+      })) ||
+    undefined;
   const onCopyToClipboard = () => ClipboardSetText(content);
 </script>
 
@@ -25,10 +40,10 @@
     visibility: visible;
   }
   button {
-    position: absolute;
-    top: 0px;
-    right: 0px;
     padding: 4px 2px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
     & > img {
       visibility: hidden;
     }

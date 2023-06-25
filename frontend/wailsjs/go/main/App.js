@@ -14,10 +14,18 @@ export function GetModifiers() {
   return window['go']['main']['App']['GetModifiers']();
 }
 
+export function GetVersionNumber() {
+  return window['go']['main']['App']['GetVersionNumber']();
+}
+
 export function SetAutostarterEnabled(arg1) {
   return window['go']['main']['App']['SetAutostarterEnabled'](arg1);
 }
 
 export function SetToggleHotkey(arg1, arg2) {
   return window['go']['main']['App']['SetToggleHotkey'](arg1, arg2);
+}
+
+export function SetWindowBounds(arg1) {
+  return window['go']['main']['App']['SetWindowBounds'](arg1);
 }

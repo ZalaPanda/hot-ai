@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -27,18 +29,50 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+// Before close a `save-bounds` event is emitted with the current window bounds
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	x, y := runtime.WindowGetPosition(a.ctx)
-	w, h := runtime.WindowGetSize(a.ctx)
-	bounds := [4]int{x, y, w, h}
+	if runtime.WindowIsMinimised(a.ctx) {
+		runtime.WindowUnminimise(a.ctx)
+	}
+	if runtime.WindowIsMaximised(a.ctx) {
+		runtime.WindowUnmaximise(a.ctx)
+	}
+
+	// Get normal window bounds
+	cx, cy := runtime.WindowGetPosition(a.ctx)
+	cw, ch := runtime.WindowGetSize(a.ctx)
+	runtime.LogDebug(a.ctx, fmt.Sprintf("Before close bounds [%d, %d, %d, %d]", cx, cy, cw, ch))
+
+	bounds := [4]int{cx, cy, cw, ch}
 	runtime.EventsEmit(a.ctx, "save-bounds", bounds) // TODO: check if this is sync!
 	return false
+}
+
+// Set window position and size
+func (a *App) SetWindowBounds(bounds [4]int) {
+	sx, sy, sw, sh := bounds[0], bounds[1], bounds[2], bounds[3]
+	runtime.LogDebug(a.ctx, fmt.Sprintf("Setting window bounds [%d, %d, %d, %d]", sx, sy, sw, sh))
+	runtime.WindowSetPosition(a.ctx, sx, sy)
+	runtime.WindowSetSize(a.ctx, sw, sh)
+
+	// Ensure window fits within screen bounds
+	runtime.WindowFullscreen(a.ctx)
+	cx, cy := runtime.WindowGetPosition(a.ctx)
+	cw, ch := runtime.WindowGetSize(a.ctx)
+	runtime.WindowUnfullscreen(a.ctx)
+
+	// Check if window is offscreen
+	if !(sx >= cx && sx <= cx+cw && sy >= cy && sy <= cy+ch) {
+		runtime.LogDebug(a.ctx, fmt.Sprintf("Screen bounds [%d, %d, %d, %d]", cx, cy, cw, ch))
+		runtime.LogDebug(a.ctx, "Window offscreen")
+		runtime.WindowCenter(a.ctx)
+	}
 }
 
 // Register global hotkey to hide/show the application
 func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	if a.ghk != nil {
-		runtime.LogDebug(a.ctx, fmt.Sprintf("Unregister old hotkey[%s]", a.ghk.String()))
+		runtime.LogDebug(a.ctx, fmt.Sprintf("Unregister old hotkey [%s]", a.ghk.String()))
 		err := a.ghk.Unregister()
 		if err != nil {
 			return err
@@ -48,7 +82,7 @@ func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	}
 
 	ghk := hotkey.New(mods, key)
-	runtime.LogDebug(a.ctx, fmt.Sprintf("Register hotkey[%s]", ghk.String()))
+	runtime.LogDebug(a.ctx, fmt.Sprintf("Register hotkey [%s]", ghk.String()))
 	err := ghk.Register()
 	if err != nil {
 		return err
@@ -113,4 +147,23 @@ func (a *App) SetAutostarterEnabled(enable bool) error {
 	} else {
 		return as.Disable()
 	}
+}
+
+type wailsJsonStruct struct {
+	Info struct {
+		ProductVersion string `json:"productVersion"`
+	} `json:"info"`
+}
+
+//go:embed wails.json
+var wailsJson string
+
+// Version number from wails.json
+func (a *App) GetVersionNumber() (string, error) {
+	var data *wailsJsonStruct
+	err := json.Unmarshal([]byte(wailsJson), &data)
+	if err != nil {
+		return "", err
+	}
+	return data.Info.ProductVersion, nil
 }

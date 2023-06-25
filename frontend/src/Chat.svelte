@@ -2,16 +2,14 @@
   import { beforeUpdate, afterUpdate, tick } from "svelte";
   import { fade } from "svelte/transition";
   import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
-  import { settings } from "./stores";
+  import { presets, settings, type Preset } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
+  import Search from "./Chat.Search.svelte";
   import Message from "./Chat.Message.svelte";
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
   import imageReset from "./assets/images/trash-can-64.png";
-  import imageColleague from "./assets/images/neutral-64.png";
-  import imageTeacher from "./assets/images/tongue-64.png";
-  import imageGeek from "./assets/images/cold-64.png";
 
   type ResponseError = {
     error: {
@@ -22,18 +20,11 @@
     };
   };
 
-  type Preset = { name: string; system: string; image: string };
-  const presets: Preset[] = [
-    { name: "Colleague", system: "You are my sarcastic colleague and you love to joke. Use markdown in your answers.", image: imageColleague },
-    { name: "Teacher", system: "You fix my sentences to sound more natural and native English. Reply only the corrected sentences.", image: imageTeacher },
-    { name: "Geek", system: "You are a digital-technology expert and you know everything about programming.", image: imageGeek },
-  ];
-
   let messageContainer: HTMLElement;
   let contentTextarea: HTMLTextAreaElement;
   let abortButton: HTMLButtonElement;
 
-  let preset = presets.at(0);
+  let preset = $presets.at(0);
   let messages: ChatCompletionRequestMessage[] = [];
   let message: ChatCompletionRequestMessage;
   let controller: AbortController;
@@ -65,6 +56,8 @@
     onContentReset();
   };
 
+  const onPresetSystemChange = () => presets.update((presets) => presets.map((current) => (current.name === preset.name ? preset : current)));
+
   const onChatAbort = () => {
     if (controller) controller.abort();
   };
@@ -90,18 +83,18 @@
       await tick();
       abortButton.focus();
       const request: CreateChatCompletionRequest = {
-        model: "gpt-3.5-turbo-0301", // https://platform.openai.com/docs/api-reference/chat,
+        model: "gpt-3.5-turbo", // https://platform.openai.com/docs/api-reference/chat,
         messages: [{ role: "system", content: preset.system }, ...messages],
         stream: true,
         max_tokens: 1000,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings?.apiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings.apiKey}` },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
-      if (!response.ok) throw new Error(`${response.status} Request failed: ${extractErrorMessage(response)}`);
+      if (!response.ok) throw new Error(`${response.status} Request failed: ${await extractErrorMessage(response)}`);
       const decoder = new TextDecoderStream();
       const reader = response.body.pipeThrough(decoder).getReader();
       while (!controller.signal.aborted) {
@@ -136,14 +129,14 @@
 </script>
 
 <h1>
-  {#each presets as { name, system, image }}
+  {#each $presets as { name, system, image }}
     {@const active = preset.name === name}
     <button on:click={onLoadPreset({ name, system, image })}><img src={image} class:active alt={name} /></button>
   {/each}
   {preset.name}
 </h1>
 <section>
-  <textarea use:adjustSize bind:value={preset.system} />
+  <textarea use:adjustSize bind:value={preset.system} on:change={onPresetSystemChange} />
   <slot />
 </section>
 <ul bind:this={messageContainer}>
@@ -151,6 +144,7 @@
     <li transition:fade><Message {role} {content} /></li>
   {/each}
 </ul>
+<Search />
 <section>
   <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
   <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>

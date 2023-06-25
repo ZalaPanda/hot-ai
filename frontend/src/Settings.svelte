@@ -1,17 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
-  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowSetPosition, WindowSetSize, WindowShow, LogDebug } from "../wailsjs/runtime";
+  import { GetKeys, GetModifiers, GetVersionNumber, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
+  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
   import { settings, type HotKey } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Dialog from "./Dialog.svelte";
   import imageSettings from "./assets/images/options-64.png";
+  import imageOpen from "./assets/images/open-64.png";
 
   const isWails = !!window["go"];
 
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
+  let update: { name: string; currentVersion: string; latestVersion: string; url: string };
   let autostarted = false;
   let isVisible = false;
 
@@ -46,8 +48,8 @@
   const onToggleMaximise = async () => {
     try {
       const isMaximized = !(await WindowIsMaximised());
-      if (isMaximized) await WindowMaximise();
-      else await WindowUnmaximise();
+      if (isMaximized) WindowMaximise();
+      else WindowUnmaximise();
       settings.update((settings) => ({ ...settings, isMaximized }));
     } catch (error) {
       dispatchError(error);
@@ -57,7 +59,7 @@
   const onToggleAlwaysOnTop = async () => {
     try {
       const alwaysOnTop = !$settings.alwaysOnTop;
-      await WindowSetAlwaysOnTop(alwaysOnTop);
+      WindowSetAlwaysOnTop(alwaysOnTop);
       settings.update((settings) => ({ ...settings, alwaysOnTop }));
     } catch (error) {
       dispatchError(error);
@@ -88,34 +90,51 @@
     settings.update((settings) => ({ ...settings, bounds }));
   };
 
-  onMount(async () => {
+  const onDismissUpdate = () => (update = undefined);
+
+  const onUpdateOpenClick = () => update?.url && BrowserOpenURL(update.url);
+
+  onMount(() => {
     try {
-      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings || {};
+      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
       if (!apiKey) isVisible = true;
       if (!isWails) return;
 
       document.addEventListener("keydown", onHandleKeydown);
       EventsOn("save-bounds", onHandleSaveBounds);
 
-      [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
-      if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-      if (isMaximized) await WindowMaximise();
-      else await WindowUnmaximise();
-      await WindowSetAlwaysOnTop(alwaysOnTop);
-      if (bounds) {
-        const [x, y, w, h] = bounds;
-        WindowSetPosition(x, y);
-        WindowSetSize(w, h);
-      }
+      if (isMaximized) WindowMaximise();
+      else WindowUnmaximise();
+      WindowSetAlwaysOnTop(alwaysOnTop);
       WindowShow();
 
-      return () => {
-        document.removeEventListener("keydown", onHandleKeydown);
-        EventsOff("save-bounds");
-      };
+      (async () => {
+        try {
+          [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
+          if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
+          if (bounds) await SetWindowBounds(bounds);
+
+          const response = await fetch("https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest");
+          const latestRelease = (await response.json()) as { name: string; tag_name: string; html_url: string };
+          const versionNumber = await GetVersionNumber();
+          if (latestRelease.tag_name === versionNumber) return;
+          update = {
+            currentVersion: versionNumber,
+            latestVersion: latestRelease.tag_name,
+            name: latestRelease.name,
+            url: latestRelease.html_url,
+          };
+        } catch (error) {
+          dispatchError(error);
+        }
+      })();
     } catch (error) {
       dispatchError(error);
     }
+    return () => {
+      document.removeEventListener("keydown", onHandleKeydown);
+      EventsOff("save-bounds");
+    };
   });
 </script>
 
@@ -125,18 +144,18 @@
     <h1>Settings</h1>
     <div>OpenAI API key:</div>
     <label>
-      <input value={$settings?.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
+      <input value={$settings.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
     </label>
-    <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings?.hotKey}>Clear</button></div>
+    <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings.hotKey}>Clear</button></div>
     <label>
       <select multiple size={4} bind:this={modifiersSelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(modifiers) as [name, value] (name)}
-          <option {value} selected={$settings?.hotKey?.modifiers?.includes(value)}>{name}</option>
+          <option {value} selected={$settings.hotKey?.modifiers?.includes(value)}>{name}</option>
         {/each}
       </select>
       <select size={4} bind:this={keySelect} on:change={onChangeHotKey} disabled={!isWails}>
         {#each Object.entries(keys) as [name, value] (name)}
-          <option {value} selected={$settings?.hotKey?.key === value}>{name}</option>
+          <option {value} selected={$settings.hotKey?.key === value}>{name}</option>
         {/each}
       </select>
     </label>
@@ -152,6 +171,14 @@
       <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} disabled={!isWails} />
       Auto-start with system
     </label>
+  </Dialog>
+{/if}
+{#if update}
+  <Dialog on:dismiss={onDismissUpdate}>
+    <h1>New version available!</h1>
+    <div>Current version: <b>{update.currentVersion}</b></div>
+    <div>Latest version: <b>{update.latestVersion}</b></div>
+    <button on:click={onUpdateOpenClick}><img src={imageOpen} alt={"Open"} />{update.name}</button>
   </Dialog>
 {/if}
 

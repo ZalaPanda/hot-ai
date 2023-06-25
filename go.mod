@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/danieloliveira085/autostarter v1.1.0
-	github.com/wailsapp/wails/v2 v2.4.1
+	github.com/wailsapp/wails/v2 v2.5.1
 	golang.design/x/hotkey v0.4.1
 )
 

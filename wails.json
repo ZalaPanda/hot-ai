@@ -7,7 +7,7 @@
   "frontend:dev:watcher": "pnpm run dev",
   "frontend:dev:serverUrl": "auto",
   "info": {
-    "productVersion": "0.0.2",
+    "productVersion": "0.0.3",
     "copyright": "MIT license",
     "comments": "Built using Wails"
   }
