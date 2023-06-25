@@ -1,17 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
-  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow } from "../wailsjs/runtime";
+  import { GetKeys, GetModifiers, GetVersionNumber, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
+  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
   import { settings, type HotKey } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Dialog from "./Dialog.svelte";
   import imageSettings from "./assets/images/options-64.png";
+  import imageOpen from "./assets/images/open-64.png";
 
   const isWails = !!window["go"];
 
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
+  let update: { name: string; currentVersion: string; latestVersion: string; url: string };
   let autostarted = false;
   let isVisible = false;
 
@@ -88,6 +90,10 @@
     settings.update((settings) => ({ ...settings, bounds }));
   };
 
+  const onDismissUpdate = () => (update = undefined);
+
+  const onUpdateOpenClick = () => update?.url && BrowserOpenURL(update.url);
+
   onMount(() => {
     try {
       const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
@@ -103,9 +109,24 @@
       WindowShow();
 
       (async () => {
-        [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
-        if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-        if (bounds) await SetWindowBounds(bounds);
+        try {
+          [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
+          if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
+          if (bounds) await SetWindowBounds(bounds);
+
+          const response = await fetch("https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest");
+          const latestRelease = (await response.json()) as { name: string; tag_name: string; html_url: string };
+          const versionNumber = await GetVersionNumber();
+          if (latestRelease.tag_name === versionNumber) return;
+          update = {
+            currentVersion: versionNumber,
+            latestVersion: latestRelease.tag_name,
+            name: latestRelease.name,
+            url: latestRelease.html_url,
+          };
+        } catch (error) {
+          dispatchError(error);
+        }
       })();
     } catch (error) {
       dispatchError(error);
@@ -150,6 +171,14 @@
       <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} disabled={!isWails} />
       Auto-start with system
     </label>
+  </Dialog>
+{/if}
+{#if update}
+  <Dialog on:dismiss={onDismissUpdate}>
+    <h1>New version available!</h1>
+    <div>Current version: <b>{update.currentVersion}</b></div>
+    <div>Latest version: <b>{update.latestVersion}</b></div>
+    <button on:click={onUpdateOpenClick}><img src={imageOpen} alt={"Open"} />{update.name}</button>
   </Dialog>
 {/if}
 

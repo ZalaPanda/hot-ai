@@ -18,5 +18,5 @@ Building: `wails build -clean -upx -webview2 embed`
 - [x] Redesign button layout
 - [x] [Frameless](https://wails.io/docs/v2.4.0/guides/frameless) appearance
 - [ ] Generate icons with [DALL-E](https://labs.openai.com/)
-- [ ] Check [releases](https://api.github.com/repos/ZalaPanda/hot-ai/releases) to check last version
+- [x] Check [releases](https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest) to check last version
 - [ ] Create tooltip component

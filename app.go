@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -145,4 +147,23 @@ func (a *App) SetAutostarterEnabled(enable bool) error {
 	} else {
 		return as.Disable()
 	}
+}
+
+type wailsJsonStruct struct {
+	Info struct {
+		ProductVersion string `json:"productVersion"`
+	} `json:"info"`
+}
+
+//go:embed wails.json
+var wailsJson string
+
+// Version number from wails.json
+func (a *App) GetVersionNumber() (string, error) {
+	var data *wailsJsonStruct
+	err := json.Unmarshal([]byte(wailsJson), &data)
+	if err != nil {
+		return "", err
+	}
+	return data.Info.ProductVersion, nil
 }

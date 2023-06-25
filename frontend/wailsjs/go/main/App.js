@@ -14,6 +14,10 @@ export function GetModifiers() {
   return window['go']['main']['App']['GetModifiers']();
 }
 
+export function GetVersionNumber() {
+  return window['go']['main']['App']['GetVersionNumber']();
+}
+
 export function SetAutostarterEnabled(arg1) {
   return window['go']['main']['App']['SetAutostarterEnabled'](arg1);
 }

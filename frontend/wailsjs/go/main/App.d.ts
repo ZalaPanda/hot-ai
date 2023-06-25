@@ -8,6 +8,8 @@ export function GetKeys():Promise<{[key: string]: hotkey.Key}>;
 
 export function GetModifiers():Promise<{[key: string]: hotkey.Modifier}>;
 
+export function GetVersionNumber():Promise<string>;
+
 export function SetAutostarterEnabled(arg1:boolean):Promise<void>;
 
 export function SetToggleHotkey(arg1:Array<hotkey.Modifier>,arg2:hotkey.Key):Promise<void>;
