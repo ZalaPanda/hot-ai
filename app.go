@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/danieloliveira085/autostarter"
@@ -151,19 +153,71 @@ func (a *App) SetAutostarterEnabled(enable bool) error {
 
 type wailsJsonStruct struct {
 	Info struct {
-		ProductVersion string `json:"productVersion"`
+		CurrentVersion string `json:"productVersion"`
 	} `json:"info"`
+}
+
+type githubReleaseStruct struct {
+	Name          string `json:"name"`
+	LatestVersion string `json:"tag_name"`
+	Url           string `json:"html_url"`
+}
+
+type Update struct {
+	CurrentVersion string `json:"currentVersion"`
+	LatestVersion  string `json:"latestVersion"`
+	Name           string `json:"name"`
+	Url            string `json:"url"`
 }
 
 //go:embed wails.json
 var wailsJson string
 
-// Version number from wails.json
-func (a *App) GetVersionNumber() (string, error) {
-	var data *wailsJsonStruct
-	err := json.Unmarshal([]byte(wailsJson), &data)
+// Compare version number from wails.json with
+// latest release tag from github
+func (a *App) CheckForUpdate() *Update {
+	var current *wailsJsonStruct
+	err := json.Unmarshal([]byte(wailsJson), &current)
 	if err != nil {
-		return "", err
+		runtime.LogErrorf(a.ctx, "Failed to get wails.json: %v", err)
+		return nil
 	}
-	return data.Info.ProductVersion, nil
+
+	url := "https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest"
+	resp, err := http.Get(url)
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "Failed to get latest release: %v", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		runtime.LogErrorf(a.ctx, "Failed to load latest release: %s", resp.Status)
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "Failed to read latest release: %v", err)
+		return nil
+	}
+	var release *githubReleaseStruct
+	err = json.Unmarshal(body, &release)
+	if err != nil {
+		runtime.LogErrorf(a.ctx, "Failed to parse latest release: %v", err)
+		return nil
+	}
+	runtime.LogDebugf(a.ctx, "Current version: %s", current.Info.CurrentVersion)
+	runtime.LogDebugf(a.ctx, "Latest version: %s", release.LatestVersion)
+
+	if current.Info.CurrentVersion == release.LatestVersion {
+		return nil
+	}
+
+	return &Update{
+		CurrentVersion: current.Info.CurrentVersion,
+		LatestVersion:  release.LatestVersion,
+		Name:           release.Name,
+		Url:            release.Url,
+	}
 }

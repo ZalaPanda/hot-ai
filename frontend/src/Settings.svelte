@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, GetVersionNumber, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
+  import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
   import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
   import { settings, type HotKey } from "./stores";
   import { autoFocus } from "./uses";
@@ -110,20 +110,9 @@
 
       (async () => {
         try {
-          [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
+          [keys, modifiers, autostarted, update] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled(), CheckForUpdate()]);
           if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
           if (bounds) await SetWindowBounds(bounds);
-
-          const response = await fetch("https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest");
-          const latestRelease = (await response.json()) as { name: string; tag_name: string; html_url: string };
-          const versionNumber = await GetVersionNumber();
-          if (latestRelease.tag_name === versionNumber) return;
-          update = {
-            currentVersion: versionNumber,
-            latestVersion: latestRelease.tag_name,
-            name: latestRelease.name,
-            url: latestRelease.html_url,
-          };
         } catch (error) {
           dispatchError(error);
         }
