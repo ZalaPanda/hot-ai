@@ -110,9 +110,9 @@
 
       (async () => {
         try {
-          [keys, modifiers, autostarted, update] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled(), CheckForUpdate()]);
           if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
           if (bounds) await SetWindowBounds(bounds);
+          [keys, modifiers, autostarted, update] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled(), CheckForUpdate()]);
         } catch (error) {
           dispatchError(error);
         }
