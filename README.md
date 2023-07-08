@@ -20,3 +20,16 @@ Building: `wails build -clean -upx -webview2 embed`
 - [ ] Generate icons with [DALL-E](https://labs.openai.com/)
 - [x] Check [releases](https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest) to check last version
 - [ ] Create tooltip component
+
+Detected: `Trojan:Win32/Sabsik.FL.B!ml` [Link](https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?name=Trojan%3AWin32%2FSabsik.FL.B!ml&threatid=2147780203) Status: `Quarantined`
+
+# GPT-4 vs GPT-3.5 Turbo
+
+| Model          | Context | Input               | Output             |
+| -------------- | ------- | ------------------- | ------------------ |
+| GPT-4          | 8K      | $0.03 / 1K tokens   | $0.06 / 1K tokens  |
+| GPT-4          | 32K     | $0.06 / 1K tokens	 | $0.12 / 1K tokens  |
+| GPT-3.5 Turbo  | 4K      | $0.0015 / 1K tokens | $0.002 / 1K tokens |
+| GPT-3.5 Turbo  | 16K     | $0.003 / 1K tokens  | $0.004 / 1K tokens |
+
+Source: [Pricing](https://openai.com/pricing)

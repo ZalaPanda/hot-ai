@@ -83,10 +83,9 @@
       await tick();
       abortButton.focus();
       const request: CreateChatCompletionRequest = {
-        model: "gpt-3.5-turbo", // https://platform.openai.com/docs/api-reference/chat,
+        model: $settings.model || "gpt-3.5-turbo",
         messages: [{ role: "system", content: preset.system }, ...messages],
         stream: true,
-        max_tokens: 1000,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",

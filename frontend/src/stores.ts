@@ -6,6 +6,7 @@ import imageGeek from "./assets/images/cold-64.png";
 export type HotKey = { modifiers: number[]; key: number };
 export interface Settings {
   apiKey?: string,
+  model?: string,
   hotKey?: HotKey,
   alwaysOnTop?: boolean,
   isMaximized?: boolean,

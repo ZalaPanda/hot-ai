@@ -13,12 +13,16 @@
 
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
+  let models: string[] = [];
   let update: { name: string; currentVersion: string; latestVersion: string; url: string };
   let autostarted = false;
   let isVisible = false;
 
+  let modelSelect: HTMLSelectElement;
   let modifiersSelect: HTMLSelectElement;
   let keySelect: HTMLSelectElement;
+
+  $: if (isVisible && !models.length && $settings.apiKey) onReloadModels();
 
   const onToggleSettings = () => (isVisible = !isVisible);
 
@@ -94,6 +98,29 @@
 
   const onUpdateOpenClick = () => update?.url && BrowserOpenURL(update.url);
 
+  const onReloadModels = async () => {
+    try {
+      models = [];
+      const response = await fetch("https://api.openai.com/v1/models", {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings.apiKey}` },
+      });
+      if (!response.ok) throw new Error(`${response.status} model list error`);
+      const { data } = (await response.json()) as { data: { id: string }[] };
+      models = data.map((model) => model.id).filter((model) => model.startsWith("gpt")); // https://platform.openai.com/docs/models/model-endpoint-compatibility
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  const onChangeModel = () => {
+    try {
+      const model = modelSelect.value;
+      settings.update((settings) => ({ ...settings, model }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
   onMount(() => {
     try {
       const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
@@ -134,6 +161,14 @@
     <div>OpenAI API key:</div>
     <label>
       <input value={$settings.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
+    </label>
+    <div>OpenAI model: <button on:click={onReloadModels} disabled={!!$settings.hotKey}>Refresh</button></div>
+    <label>
+      <select bind:this={modelSelect} on:change={onChangeModel} disabled={!models.length}>
+        {#each models as value}
+          <option {value} selected={value === ($settings.model || "gpt-3.5-turbo")}>{value}</option>
+        {/each}
+      </select>
     </label>
     <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings.hotKey}>Clear</button></div>
     <label>
@@ -178,21 +213,26 @@
     gap: 8px;
     margin-bottom: 4px;
   }
+  input,
   select {
+    width: 260px;
+  }
+  select[size] {
+    width: unset;
     height: 100px;
   }
   input[type="checkbox"] {
     min-width: unset;
-    width: 1.3em;
-    height: 1.3em;
-    background-color: white;
+    width: 1em;
+    height: 1em;
+    background-color: #ffffff;
     border-radius: 50%;
     vertical-align: middle;
-    border: 1px solid #ddd;
+    border: 2px solid #dfe3e9;
     appearance: none;
     cursor: pointer;
     &:checked {
-      background-color: green;
+      background-color: #52b788;
     }
   }
 </style>
