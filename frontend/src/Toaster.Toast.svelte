@@ -9,15 +9,15 @@
 
   const dispatch = createEventDispatcher();
   const dispatchDismiss = () => dispatch("dismiss");
-  const updateTimeout = (duration: number) => () => {
+  const onUpdateTimeout = (duration: number) => () => {
     clearTimeout(timeout);
     timeout = duration ? setTimeout(() => dispatch("dismiss"), duration) : 0;
   };
 
-  onMount(() => updateTimeout(duration)());
+  onMount(() => onUpdateTimeout(duration)());
 </script>
 
-<article transition:fly on:mouseenter={updateTimeout(0)} on:mouseleave={updateTimeout(duration)}>
+<article transition:fly on:mouseenter={onUpdateTimeout(0)} on:mouseleave={onUpdateTimeout(duration)}>
   <button on:click={dispatchDismiss}><img src={imageAlert} alt={"Alert"} /></button>
   <span>{text}</span>
 </article>

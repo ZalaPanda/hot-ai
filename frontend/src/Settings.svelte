@@ -129,31 +129,31 @@
   let dragging: { preset: Preset; clientX: number; clientY: number };
   let delta = spring({ x: 0, y: 0, scale: 1 }, { stiffness: 0.1, damping: 0.25 });
 
-  const onProfileSelect = (preset: Preset) => () => (activePreset = preset);
+  const onPresetSelect = (preset: Preset) => () => (activePreset = preset);
 
-  const onProfileDragStart = (preset: Preset) => (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
+  const onPresetDragStart = (preset: Preset) => (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
     const { clientX, clientY } = event;
     event.preventDefault();
     activePreset = preset;
     dragging = { preset, clientX, clientY };
     delta.set({ x: 0, y: 0, scale: 1.1 }, { hard: true });
-    window.addEventListener("mousemove", onProfileDragMove);
-    window.addEventListener("mouseup", onProfileDragStop);
+    window.addEventListener("mousemove", onPresetDragMove);
+    window.addEventListener("mouseup", onPresetDragStop);
   };
 
-  const onProfileDragMove = (event: MouseEvent) => {
+  const onPresetDragMove = (event: MouseEvent) => {
     delta.update((delta) => ({ ...delta, x: event.clientX - dragging.clientX, y: Math.min(Math.max(event.clientY - dragging.clientY, -imageSize), imageSize) }));
   };
 
-  const onProfileDragStop = (event: MouseEvent) => {
+  const onPresetDragStop = (event: MouseEvent) => {
     presets.update((presets) => {
       const currIndex = presets.findIndex((preset) => preset === activePreset);
       const nextIndex = Math.max(Math.min(Math.round(currIndex + (event.clientX - dragging.clientX) / imageSize), presets.length - 1), 0);
       return presets.map((preset, index, presets) => (index === currIndex ? presets[nextIndex] : index === nextIndex ? presets[currIndex] : preset));
     });
     dragging = undefined;
-    window.removeEventListener("mousemove", onProfileDragMove);
-    window.removeEventListener("mouseup", onProfileDragStop);
+    window.removeEventListener("mousemove", onPresetDragMove);
+    window.removeEventListener("mouseup", onPresetDragStop);
   };
 
   const onPresetNameInput = (event: Event & { currentTarget: HTMLInputElement }) => {
@@ -236,10 +236,10 @@
     </label>
     <section>
       {#each $presets as preset (preset.image)}
-        {@const style = preset === dragging?.preset && `transform: translate(${$delta.x}px, ${$delta.y}px);z-index:1;`}
+        {@const style = preset === dragging?.preset && `transform: translate(${$delta.x}px,${$delta.y}px) scale(${$delta.scale}); z-index: 1;`}
         {@const active = preset === activePreset}
         {@const enabled = preset.enabled}
-        <button on:click={onProfileSelect(preset)} on:mousedown={onProfileDragStart(preset)} {style}>
+        <button on:click={onPresetSelect(preset)} on:mousedown={onPresetDragStart(preset)} {style}>
           <img src={preset.image} alt={preset.image} class:active class:enabled />
         </button>
       {/each}

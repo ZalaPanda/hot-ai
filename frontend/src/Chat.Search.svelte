@@ -10,14 +10,18 @@
   const hasFocus = () => document.activeElement === searchInput;
 
   const onHandleKeydown = (event: KeyboardEvent) => {
-    if (event.key === "F3" || (event.ctrlKey && event.key === "F")) return onToggleSearch();
+    if (event.key === "F3" || (event.ctrlKey && event.key === "f")) {
+      event.preventDefault();
+      onToggleSearch();
+      return;
+    }
   };
 
   const onHideSearch = () => ($search = undefined);
   const onToggleSearch = () => ($search && !hasFocus() ? searchInput.select() : ($search = $search === undefined ? "" : undefined));
 
   const onSearchKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLInputElement }) => {
-    if (event.key != "Escape") return;
+    if (event.key !== "Escape") return;
     event.preventDefault();
     onHideSearch();
   };
@@ -36,6 +40,11 @@
 {/if}
 
 <style lang="less">
+  article {
+    position: relative;
+    top: -36px;
+    height: 0;
+  }
   input {
     position: absolute;
     background-color: #ffebba;

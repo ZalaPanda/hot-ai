@@ -227,13 +227,14 @@
   }
   section {
     display: flex;
-
     gap: 8px;
     &.system {
       align-items: flex-start;
+      margin: 8px 0;
     }
     &.content {
       align-items: flex-end;
+      margin: 8px 0 0;
     }
     & > textarea {
       flex: 1 1;
