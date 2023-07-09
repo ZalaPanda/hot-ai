@@ -2,12 +2,13 @@
   import { onMount } from "svelte";
   import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
   import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
-  import { settings, type HotKey } from "./stores";
+  import { settings, presets, type HotKey, type Preset } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Dialog from "./Dialog.svelte";
   import imageSettings from "./assets/images/options-64.png";
   import imageOpen from "./assets/images/open-64.png";
+  import { spring } from "svelte/motion";
 
   const isWails = !!window["go"];
 
@@ -41,7 +42,6 @@
           .at(0),
       };
       if (!hotKey.modifiers.length || !hotKey.key) return;
-      console.log("register", hotKey.modifiers, hotKey.key);
       await SetToggleHotkey(hotKey.modifiers, hotKey.key);
       settings.update((settings) => ({ ...settings, hotKey }));
     } catch (error) {
@@ -81,7 +81,7 @@
       await SetAutostarterEnabled(!autostarted);
       autostarted = await GetAutostarterEnabled();
     } catch (error) {
-      console.error(error);
+      dispatchError(error);
     }
   };
 
@@ -96,7 +96,10 @@
 
   const onDismissUpdate = () => (update = undefined);
 
-  const onUpdateOpenClick = () => update?.url && BrowserOpenURL(update.url);
+  const onHyperlinkClick = (event: MouseEvent & { currentTarget: EventTarget & HTMLAnchorElement }) => {
+    const url = event.currentTarget?.href;
+    url && BrowserOpenURL(url);
+  };
 
   const onReloadModels = async () => {
     try {
@@ -121,13 +124,57 @@
     }
   };
 
+  const imageSize = 42;
+  let activePreset = $presets.at(0);
+  let dragging: { preset: Preset; clientX: number; clientY: number };
+  let delta = spring({ x: 0, y: 0, scale: 1 }, { stiffness: 0.1, damping: 0.25 });
+
+  const onProfileSelect = (preset: Preset) => () => (activePreset = preset);
+
+  const onProfileDragStart = (preset: Preset) => (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
+    const { clientX, clientY } = event;
+    event.preventDefault();
+    activePreset = preset;
+    dragging = { preset, clientX, clientY };
+    delta.set({ x: 0, y: 0, scale: 1.1 }, { hard: true });
+    window.addEventListener("mousemove", onProfileDragMove);
+    window.addEventListener("mouseup", onProfileDragStop);
+  };
+
+  const onProfileDragMove = (event: MouseEvent) => {
+    delta.update((delta) => ({ ...delta, x: event.clientX - dragging.clientX, y: Math.min(Math.max(event.clientY - dragging.clientY, -imageSize), imageSize) }));
+  };
+
+  const onProfileDragStop = (event: MouseEvent) => {
+    presets.update((presets) => {
+      const currIndex = presets.findIndex((preset) => preset === activePreset);
+      const nextIndex = Math.max(Math.min(Math.round(currIndex + (event.clientX - dragging.clientX) / imageSize), presets.length - 1), 0);
+      return presets.map((preset, index, presets) => (index === currIndex ? presets[nextIndex] : index === nextIndex ? presets[currIndex] : preset));
+    });
+    dragging = undefined;
+    window.removeEventListener("mousemove", onProfileDragMove);
+    window.removeEventListener("mouseup", onProfileDragStop);
+  };
+
+  const onPresetNameInput = (event: Event & { currentTarget: HTMLInputElement }) => {
+    const updatedPreset = { ...activePreset, name: event.currentTarget.value };
+    presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
+    activePreset = updatedPreset;
+  };
+
+  const onPresetEnabledChange = (event: Event & { currentTarget: HTMLInputElement }) => {
+    const updatedPreset = { ...activePreset, enabled: event.currentTarget.checked };
+    presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
+    activePreset = updatedPreset;
+  };
+
   onMount(() => {
     try {
       const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
       if (!apiKey) isVisible = true;
       if (!isWails) return;
 
-      document.addEventListener("keydown", onHandleKeydown);
+      window.addEventListener("keydown", onHandleKeydown);
       EventsOn("save-bounds", onHandleSaveBounds);
 
       if (isMaximized) WindowMaximise();
@@ -148,7 +195,7 @@
       dispatchError(error);
     }
     return () => {
-      document.removeEventListener("keydown", onHandleKeydown);
+      window.removeEventListener("keydown", onHandleKeydown);
       EventsOff("save-bounds");
     };
   });
@@ -184,17 +231,24 @@
       </select>
     </label>
     <label>
-      <input type={"checkbox"} checked={$settings.isMaximized} on:change={onToggleMaximise} disabled={!isWails} />
-      Maximized (<kbd>F11</kbd>)
-    </label>
-    <label>
-      <input type={"checkbox"} checked={$settings.alwaysOnTop} on:change={onToggleAlwaysOnTop} disabled={!isWails} />
-      Always on Top (<kbd>F12</kbd>)
-    </label>
-    <label>
       <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} disabled={!isWails} />
       Auto-start with system
     </label>
+    <section>
+      {#each $presets as preset (preset.image)}
+        {@const style = preset === dragging?.preset && `transform: translate(${$delta.x}px, ${$delta.y}px);z-index:1;`}
+        {@const active = preset === activePreset}
+        {@const enabled = preset.enabled}
+        <button on:click={onProfileSelect(preset)} on:mousedown={onProfileDragStart(preset)} {style}>
+          <img src={preset.image} alt={preset.image} class:active class:enabled />
+        </button>
+      {/each}
+    </section>
+    <label>
+      <input type={"text"} value={activePreset.name} placeholder={"Preset name"} size={12} on:input={onPresetNameInput} />
+      <input type={"checkbox"} checked={activePreset.enabled} on:change={onPresetEnabledChange} /> Enabled
+    </label>
+    <small>Icons by <a href="https://icons8.com" on:click={onHyperlinkClick}>Icons8</a></small>
   </Dialog>
 {/if}
 {#if update}
@@ -202,20 +256,20 @@
     <h1>New version available!</h1>
     <div>Current version: <b>{update.currentVersion}</b></div>
     <div>Latest version: <b>{update.latestVersion}</b></div>
-    <button on:click={onUpdateOpenClick}><img src={imageOpen} alt={"Open"} />{update.name}</button>
+    <a href={update.url} on:click={onHyperlinkClick}><img src={imageOpen} alt={"Open"} />{update.name}</a>
   </Dialog>
 {/if}
 
 <style lang="less">
   label {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     margin-bottom: 4px;
   }
-  input,
+  input[type="password"],
   select {
-    width: 260px;
+    width: 240px;
   }
   select[size] {
     width: unset;
@@ -234,5 +288,26 @@
     &:checked {
       background-color: #52b788;
     }
+  }
+  section {
+    margin-top: 8px;
+    display: flex;
+    & > button {
+      padding: 1px 4px;
+      img {
+        filter: blur(2px);
+        &:hover,
+        &.active {
+          filter: none;
+        }
+        opacity: 0.3;
+        &.enabled {
+          opacity: 1;
+        }
+      }
+    }
+  }
+  small {
+    margin-top: 8px;
   }
 </style>

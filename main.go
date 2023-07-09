@@ -18,8 +18,8 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:            "hot-ai",
-		MinWidth:         600,
-		MinHeight:        400,
+		MinWidth:         640,
+		MinHeight:        480,
 		Frameless:        true,
 		StartHidden:      true,
 		AssetServer:      &assetserver.Options{Assets: assets},

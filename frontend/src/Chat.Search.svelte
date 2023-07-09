@@ -23,8 +23,8 @@
   };
 
   onMount(() => {
-    document.addEventListener("keydown", onHandleKeydown);
-    return () => document.removeEventListener("keydown", onHandleKeydown);
+    window.addEventListener("keydown", onHandleKeydown);
+    return () => window.removeEventListener("keydown", onHandleKeydown);
   });
 </script>
 

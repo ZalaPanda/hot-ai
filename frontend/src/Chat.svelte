@@ -1,7 +1,6 @@
 <script lang="ts">
   import { beforeUpdate, afterUpdate, tick } from "svelte";
   import { fade } from "svelte/transition";
-  import { type CreateChatCompletionRequest, type ChatCompletionRequestMessage } from "openai";
   import { presets, settings, type Preset } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
@@ -11,6 +10,15 @@
   import imageAbort from "./assets/images/rejected-64.png";
   import imageReset from "./assets/images/trash-can-64.png";
 
+  type CompletionMessage = {
+    role: "system" | "user" | "assistant" | "function";
+    content?: string;
+  };
+  type CompletionRequest = {
+    model: string;
+    messages: CompletionMessage[];
+    stream: true;
+  };
   type ResponseError = {
     error: {
       message: string; // "That model is currently overloaded with other requests..."
@@ -24,9 +32,9 @@
   let contentTextarea: HTMLTextAreaElement;
   let abortButton: HTMLButtonElement;
 
-  let preset = $presets.at(0);
-  let messages: ChatCompletionRequestMessage[] = [];
-  let message: ChatCompletionRequestMessage;
+  $: activePreset = $presets.at(0);
+  let messages: CompletionMessage[] = [];
+  let message: CompletionMessage;
   let controller: AbortController;
   let autoscroll: boolean;
 
@@ -51,12 +59,14 @@
     onChatCompletion();
   };
 
-  const onLoadPreset = (selectedPreset: Preset) => () => {
-    preset = selectedPreset;
+  const onLoadPreset = (preset: Preset) => async () => {
+    activePreset = preset;
     onContentReset();
+    await tick();
+    window.dispatchEvent(new Event("resize"));
   };
 
-  const onPresetSystemChange = () => presets.update((presets) => presets.map((current) => (current.name === preset.name ? preset : current)));
+  const onPresetSystemChange = () => presets.update((presets) => presets.map((preset) => (preset === activePreset ? activePreset : preset)));
 
   const onChatAbort = () => {
     if (controller) controller.abort();
@@ -82,9 +92,9 @@
       controller = new AbortController();
       await tick();
       abortButton.focus();
-      const request: CreateChatCompletionRequest = {
+      const request: CompletionRequest = {
         model: $settings.model || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: preset.system }, ...messages],
+        messages: [{ role: "system", content: activePreset.system }, ...messages],
         stream: true,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -128,14 +138,15 @@
 </script>
 
 <h1>
-  {#each $presets as { name, system, image }}
-    {@const active = preset.name === name}
-    <button on:click={onLoadPreset({ name, system, image })}><img src={image} class:active alt={name} /></button>
+  {#each $presets as preset}
+    <button on:click={onLoadPreset(preset)} hidden={!preset.enabled}>
+      <img src={preset.image} class:active={activePreset === preset} alt={preset.name} />
+    </button>
   {/each}
-  {preset.name}
+  <span>{activePreset.name}</span>
 </h1>
-<section>
-  <textarea use:adjustSize bind:value={preset.system} on:change={onPresetSystemChange} />
+<section class:system={true}>
+  <textarea use:adjustSize bind:value={activePreset.system} on:change={onPresetSystemChange} />
   <slot />
 </section>
 <ul bind:this={messageContainer}>
@@ -144,7 +155,7 @@
   {/each}
 </ul>
 <Search />
-<section>
+<section class:content={true}>
   <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
   <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>
   <button on:click={onChatAbort} disabled={!controller} bind:this={abortButton}><img src={imageAbort} alt={"Abort"} /></button>
@@ -161,12 +172,22 @@
     background-color: #2e405c;
     user-select: none;
     -webkit-user-select: none;
-    & > button > img {
-      filter: blur(4px);
-      &:hover,
-      &.active {
-        filter: none;
+    & > button {
+      &[hidden] {
+        display: none;
       }
+      & > img {
+        filter: blur(4px);
+        &:hover,
+        &.active {
+          filter: none;
+        }
+      }
+    }
+    span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
   ul {
@@ -206,8 +227,14 @@
   }
   section {
     display: flex;
-    align-items: center;
+
     gap: 8px;
+    &.system {
+      align-items: flex-start;
+    }
+    &.content {
+      align-items: flex-end;
+    }
     & > textarea {
       flex: 1 1;
     }
