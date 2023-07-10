@@ -23,7 +23,7 @@
 
   const onToggleSearch = () => {
     if ($search === undefined) $search = "";
-    else document.activeElement === searchInput ? onHideSearch() : onFocusSearch();
+    else document.hasFocus() && document.activeElement === searchInput ? onHideSearch() : onFocusSearch();
   };
 
   const onSearchKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLInputElement }) => {

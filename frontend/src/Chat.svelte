@@ -9,6 +9,16 @@
       code: any; // null
     };
   };
+  type CompletionMessage = {
+    role?: "system" | "user" | "assistant" | "function";
+    content: string;
+    starred?: boolean;
+  };
+  type CompletionRequest = {
+    model: string;
+    messages: CompletionMessage[];
+    stream: true;
+  };
 
   const extractErrorMessage = async (response: Response) => {
     try {
@@ -35,17 +45,6 @@
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
   import imageReset from "./assets/images/trash-can-64.png";
-
-  type CompletionMessage = {
-    role?: "system" | "user" | "assistant" | "function";
-    content: string;
-    starred?: boolean;
-  };
-  type CompletionRequest = {
-    model: string;
-    messages: CompletionMessage[];
-    stream: true;
-  };
 
   let messageContainer: HTMLElement;
   let contentTextarea: HTMLTextAreaElement;
@@ -104,7 +103,7 @@
       abortButton.focus();
       const request: CompletionRequest = {
         model: $settings.model || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: activePreset.system }, ...messages],
+        messages: [{ role: "system", content: activePreset.system }, ...messages.filter((message) => message.role)],
         stream: true,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -195,8 +194,7 @@
   };
 
   const onHandleHotkeyPress = () => {
-    const hasFocus = () => document.activeElement === contentTextarea;
-    if (isVisible && hasFocus()) {
+    if (isVisible && document.hasFocus() && document.activeElement === contentTextarea) {
       WindowHide();
       isVisible = false;
     } else {

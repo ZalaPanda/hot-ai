@@ -40,7 +40,7 @@
 
 <article class:user={role === "user"} class:assistant={role === "assistant"} class:starred>
   <section>
-    <button on:click={onToggleStarred}><img src={imageStar} alt={"Copy to clipboard"} /></button>
+    <button on:click={onToggleStarred}><img src={imageStar} alt={"Toggle starred"} /></button>
     <button on:click={onCopyToClipboard}><img src={imageClipboard} alt={"Copy to clipboard"} /></button>
   </section>
   {@html html}
@@ -71,14 +71,6 @@
     & > section {
       & > button {
         padding: 0px;
-        // & > img:hover,
-        // & > img.isPinned {
-        //   filter: grayscale(0);
-        // }
-        // & > img,
-        // & > img.isPinned:hover {
-        //   filter: grayscale(1);
-        // }
       }
       display: flex;
       position: absolute;
