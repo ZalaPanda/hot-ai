@@ -1,10 +1,16 @@
+<script context="module" lang="ts">
+  export const dispatchFocusChat = () => window.dispatchEvent(new FocusEvent("focus-chat"));
+</script>
+
 <script lang="ts">
-  import { beforeUpdate, afterUpdate, tick } from "svelte";
+  import { beforeUpdate, afterUpdate, tick, onMount } from "svelte";
   import { fade } from "svelte/transition";
+  import { EventsOff, EventsOn, WindowHide, WindowIsMaximised, WindowMaximise, WindowSetAlwaysOnTop, WindowShow, WindowUnmaximise } from "../wailsjs/runtime";
+  import { SetToggleHotkey, SetWindowBounds } from "../wailsjs/go/main/App";
   import { presets, settings, type Preset } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
-  import Search from "./Chat.Search.svelte";
+  import Search, { dispatchToggleSearch } from "./Chat.Search.svelte";
   import Message from "./Chat.Message.svelte";
   import imageSubmit from "./assets/images/play-64.png";
   import imageAbort from "./assets/images/rejected-64.png";
@@ -28,15 +34,19 @@
     };
   };
 
+  const isWails = !!window["go"];
+
   let messageContainer: HTMLElement;
   let contentTextarea: HTMLTextAreaElement;
   let abortButton: HTMLButtonElement;
 
-  $: activePreset = $presets.at(0);
   let messages: CompletionMessage[] = [];
   let message: CompletionMessage;
   let controller: AbortController;
   let autoscroll: boolean;
+  let isVisible = true;
+
+  $: activePreset = $presets.at(0);
 
   beforeUpdate(() => {
     if (!messageContainer) return;
@@ -45,7 +55,7 @@
   });
   afterUpdate(() => {
     if (!autoscroll) return;
-    messageContainer.scrollTo(0, messageContainer.scrollHeight);
+    messageContainer.scrollTo({ top: messageContainer.scrollHeight, behavior: "smooth" });
   });
 
   const onContentReset = () => {
@@ -68,9 +78,7 @@
 
   const onPresetSystemChange = () => presets.update((presets) => presets.map((preset) => (preset === activePreset ? activePreset : preset)));
 
-  const onChatAbort = () => {
-    if (controller) controller.abort();
-  };
+  const onChatAbort = () => controller?.abort();
 
   const extractErrorMessage = async (response: Response) => {
     try {
@@ -135,6 +143,101 @@
       contentTextarea.select();
     }
   };
+
+  const onHandleFocusChat = () => {
+    debugger;
+    contentTextarea.select();
+  };
+
+  const onHandleKeydown = (event: KeyboardEvent) => {
+    if (event.key === "F11") {
+      event.preventDefault();
+      onToggleMaximise();
+      return;
+    }
+    if (event.key === "F12") {
+      event.preventDefault();
+      onToggleAlwaysOnTop();
+      return;
+    }
+    if (event.key === "F3" || (event.ctrlKey && event.key === "f")) {
+      event.preventDefault();
+      dispatchToggleSearch();
+      return;
+    }
+  };
+
+  const onToggleMaximise = async () => {
+    try {
+      const isMaximized = !(await WindowIsMaximised());
+      if (isMaximized) WindowMaximise();
+      else WindowUnmaximise();
+      settings.update((settings) => ({ ...settings, isMaximized }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  const onToggleAlwaysOnTop = async () => {
+    try {
+      const alwaysOnTop = !$settings.alwaysOnTop;
+      WindowSetAlwaysOnTop(alwaysOnTop);
+      settings.update((settings) => ({ ...settings, alwaysOnTop }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  const onHandleHotkeyPress = () => {
+    const hasFocus = () => document.activeElement === contentTextarea;
+    if (isVisible && hasFocus()) {
+      WindowHide();
+      isVisible = false;
+    } else {
+      WindowShow();
+      contentTextarea.select();
+      isVisible = true;
+    }
+  };
+
+  const onHandleSaveBounds = (bounds: [number, number, number, number]) => {
+    settings.update((settings) => ({ ...settings, bounds }));
+  };
+
+  onMount(() => {
+    try {
+      const { hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
+      // if (!isWails) return;
+
+      window.addEventListener("keydown", onHandleKeydown);
+      window.addEventListener("focus-chat", onHandleFocusChat);
+      EventsOn("hotkey-press", onHandleHotkeyPress);
+      EventsOn("save-bounds", onHandleSaveBounds);
+
+      (async () => {
+        try {
+          if (isMaximized) WindowMaximise();
+          else WindowUnmaximise();
+
+          WindowSetAlwaysOnTop(alwaysOnTop);
+          WindowShow();
+
+          if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
+          if (bounds) await SetWindowBounds(bounds);
+        } catch (error) {
+          dispatchError(error);
+        }
+      })();
+    } catch (error) {
+      dispatchError(error);
+    }
+    return () => {
+      window.removeEventListener("keydown", onHandleKeydown);
+      window.removeEventListener("focus-chat", onHandleFocusChat);
+      EventsOff("hotkey-press");
+      EventsOff("save-bounds");
+    };
+  });
 </script>
 
 <h1>

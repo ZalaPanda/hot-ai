@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
-  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
+  import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
+  import { BrowserOpenURL } from "../wailsjs/runtime";
   import { settings, presets, type HotKey, type Preset } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
@@ -49,27 +49,6 @@
     }
   };
 
-  const onToggleMaximise = async () => {
-    try {
-      const isMaximized = !(await WindowIsMaximised());
-      if (isMaximized) WindowMaximise();
-      else WindowUnmaximise();
-      settings.update((settings) => ({ ...settings, isMaximized }));
-    } catch (error) {
-      dispatchError(error);
-    }
-  };
-
-  const onToggleAlwaysOnTop = async () => {
-    try {
-      const alwaysOnTop = !$settings.alwaysOnTop;
-      WindowSetAlwaysOnTop(alwaysOnTop);
-      settings.update((settings) => ({ ...settings, alwaysOnTop }));
-    } catch (error) {
-      dispatchError(error);
-    }
-  };
-
   const onClearHotKey = () => {
     modifiersSelect.value = undefined;
     keySelect.value = undefined;
@@ -83,15 +62,6 @@
     } catch (error) {
       dispatchError(error);
     }
-  };
-
-  const onHandleKeydown = (event: KeyboardEvent) => {
-    if (event.key === "F11") return onToggleMaximise();
-    if (event.key === "F12") return onToggleAlwaysOnTop();
-  };
-
-  const onHandleSaveBounds = (bounds: [number, number, number, number]) => {
-    settings.update((settings) => ({ ...settings, bounds }));
   };
 
   const onDismissUpdate = () => (update = undefined);
@@ -170,22 +140,12 @@
 
   onMount(() => {
     try {
-      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
+      const { apiKey } = $settings;
       if (!apiKey) isVisible = true;
       if (!isWails) return;
 
-      window.addEventListener("keydown", onHandleKeydown);
-      EventsOn("save-bounds", onHandleSaveBounds);
-
-      if (isMaximized) WindowMaximise();
-      else WindowUnmaximise();
-      WindowSetAlwaysOnTop(alwaysOnTop);
-      WindowShow();
-
       (async () => {
         try {
-          if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-          if (bounds) await SetWindowBounds(bounds);
           [keys, modifiers, autostarted, update] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled(), CheckForUpdate()]);
         } catch (error) {
           dispatchError(error);
@@ -194,10 +154,6 @@
     } catch (error) {
       dispatchError(error);
     }
-    return () => {
-      window.removeEventListener("keydown", onHandleKeydown);
-      EventsOff("save-bounds");
-    };
   });
 </script>
 

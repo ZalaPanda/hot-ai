@@ -93,7 +93,6 @@ func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 	a.ghk = ghk
 
 	go func() {
-		visible := true
 		for {
 			_, ok := <-a.ghk.Keydown()
 			if !ok {
@@ -101,12 +100,7 @@ func (a *App) SetToggleHotkey(mods []hotkey.Modifier, key hotkey.Key) error {
 				return
 			}
 			runtime.LogDebug(a.ctx, "Keydown event received")
-			visible = !visible
-			if visible {
-				runtime.WindowShow(a.ctx)
-			} else {
-				runtime.WindowHide(a.ctx)
-			}
+			runtime.EventsEmit(a.ctx, "hotkey-press")
 		}
 	}()
 	return nil

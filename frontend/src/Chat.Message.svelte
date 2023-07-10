@@ -1,11 +1,12 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { marked } from "marked";
   import { ClipboardSetText } from "../wailsjs/runtime";
+  import { marked } from "marked";
   import DOMPurify from "dompurify";
-  import imageClipboard from "./assets/images/clipboard-64.png";
   import { search } from "./stores";
+  import { dispatchFocusChat } from "./Chat.svelte";
+  import imageClipboard from "./assets/images/clipboard-64.png";
 
   export let role: string;
   export let content: string;
@@ -19,15 +20,17 @@
         ...options,
         walkTokens: (token: marked.Token) => {
           if ("tokens" in token) return;
-          if ("text" in token) token["text"] = token["text"].replace(expression, "<mark>$&</mark>");
+          if ("text" in token && expression?.test(token["text"])) {
+            token["text"] = token["text"].replace(expression, "⁅$&⁆");
+          }
         },
         hooks: {
           preprocess: (markdown: string) => markdown,
-          postprocess: (html: string) => DOMPurify.sanitize(html),
+          postprocess: (html: string) => DOMPurify.sanitize(html.replace(/⁅/g, "<mark>").replace(/⁆/g, "</mark>")),
         },
       })) ||
     undefined;
-  const onCopyToClipboard = () => ClipboardSetText(content);
+  const onCopyToClipboard = () => ClipboardSetText(content) && dispatchFocusChat();
 </script>
 
 <article class:user={role === "user"} class:assistant={role === "assistant"}>
