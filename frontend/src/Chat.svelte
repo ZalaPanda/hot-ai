@@ -144,10 +144,7 @@
     }
   };
 
-  const onHandleFocusChat = () => {
-    debugger;
-    contentTextarea.select();
-  };
+  const onHandleFocusChat = () => contentTextarea.select();
 
   const onHandleKeydown = (event: KeyboardEvent) => {
     if (event.key === "F11") {
@@ -163,6 +160,13 @@
     if (event.key === "F3" || (event.ctrlKey && event.key === "f")) {
       event.preventDefault();
       dispatchToggleSearch();
+      return;
+    }
+    if (event.ctrlKey && ["1", "2", "3", "4", "5", "6"].includes(event.key)) {
+      const preset = $presets.at(Number(event.key) - 1);
+      if (!preset?.enabled) return;
+      event.preventDefault();
+      onLoadPreset(preset)();
       return;
     }
   };
