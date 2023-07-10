@@ -9,7 +9,7 @@ Building: `wails build -clean -webview2 embed`
 
 > **Note:** Building flag `-upx` removed! This means bigger binary size but no [false positive antivirus alerts](https://github.com/upx/upx/issues/437).
 
-![Screenshot](screenshot.png)
+![Demo](demo.gif)
 
 Icons: [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/bearicons/external-bearicons-outline-color-bearicons) from [Icons8](https://icons8.com)
 
