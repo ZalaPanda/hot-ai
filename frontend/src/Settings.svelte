@@ -1,3 +1,8 @@
+<script context="module" lang="ts">
+  const isWails = !!window["go"];
+  const imageSize = 42;
+</script>
+
 <script lang="ts">
   import { onMount } from "svelte";
   import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
@@ -9,8 +14,6 @@
   import imageSettings from "./assets/images/options-64.png";
   import imageOpen from "./assets/images/open-64.png";
   import { spring } from "svelte/motion";
-
-  const isWails = !!window["go"];
 
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
@@ -94,7 +97,6 @@
     }
   };
 
-  const imageSize = 42;
   let activePreset = $presets.at(0);
   let dragging: { preset: Preset; clientX: number; clientY: number };
   let delta = spring({ x: 0, y: 0, scale: 1 }, { stiffness: 0.1, damping: 0.25 });

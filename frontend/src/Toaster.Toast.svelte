@@ -29,17 +29,19 @@
     align-items: center;
     flex-shrink: 0;
 
+    border: 1px solid #803939;
     background-color: #cd5c5c;
     color: #eeeff1;
 
-    margin: 4px auto 0 auto;
+    margin: 2px auto 0 auto;
     padding: 6px 8px;
     font-size: 18px;
-    border-radius: 4px;
+    border-radius: 12px;
     box-shadow: 0 3px 9px #00000066;
     max-width: 360px;
     button {
       padding: 0;
+      margin-right: 8px;
     }
   }
 </style>

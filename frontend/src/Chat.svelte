@@ -1,5 +1,25 @@
 <script context="module" lang="ts">
   export const dispatchFocusChat = () => window.dispatchEvent(new FocusEvent("focus-chat"));
+
+  type ResponseError = {
+    error: {
+      message: string; // "That model is currently overloaded with other requests..."
+      type: string; // "server_error"
+      param: any; // null
+      code: any; // null
+    };
+  };
+
+  const extractErrorMessage = async (response: Response) => {
+    try {
+      const result: ResponseError = await response.json();
+      return result.error.message;
+    } catch {
+      return response.statusText;
+    }
+  };
+
+  const isWails = !!window["go"];
 </script>
 
 <script lang="ts">
@@ -17,24 +37,15 @@
   import imageReset from "./assets/images/trash-can-64.png";
 
   type CompletionMessage = {
-    role: "system" | "user" | "assistant" | "function";
-    content?: string;
+    role?: "system" | "user" | "assistant" | "function";
+    content: string;
+    starred?: boolean;
   };
   type CompletionRequest = {
     model: string;
     messages: CompletionMessage[];
     stream: true;
   };
-  type ResponseError = {
-    error: {
-      message: string; // "That model is currently overloaded with other requests..."
-      type: string; // "server_error"
-      param: any; // null
-      code: any; // null
-    };
-  };
-
-  const isWails = !!window["go"];
 
   let messageContainer: HTMLElement;
   let contentTextarea: HTMLTextAreaElement;
@@ -44,7 +55,7 @@
   let message: CompletionMessage;
   let controller: AbortController;
   let autoscroll: boolean;
-  let isVisible = true;
+  let isVisible: boolean = true;
 
   $: activePreset = $presets.at(0);
 
@@ -59,7 +70,7 @@
   });
 
   const onContentReset = () => {
-    messages = [];
+    messages = messages.filter((message) => message.starred || !message.role).map(({ content }) => ({ content }));
     contentTextarea.select();
   };
 
@@ -79,15 +90,6 @@
   const onPresetSystemChange = () => presets.update((presets) => presets.map((preset) => (preset === activePreset ? activePreset : preset)));
 
   const onChatAbort = () => controller?.abort();
-
-  const extractErrorMessage = async (response: Response) => {
-    try {
-      const result: ResponseError = await response.json();
-      return result.error.message;
-    } catch {
-      return response.statusText;
-    }
-  };
 
   const onChatCompletion = async () => {
     try {
@@ -208,10 +210,19 @@
     settings.update((settings) => ({ ...settings, bounds }));
   };
 
+  const onMessageToggleStarred = (index: number) => () => {
+    const messageInstance = messages.at(index);
+    if (!messageInstance) return;
+    if (!messageInstance.role) messages = messages.filter((message) => message !== messageInstance);
+    else messages = messages.map((message) => (message === messageInstance ? { ...messageInstance, starred: !messageInstance.starred } : message));
+    console.log(index, messages[index]);
+    contentTextarea.select();
+  };
+
   onMount(() => {
     try {
       const { hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
-      // if (!isWails) return;
+      if (!isWails) return;
 
       window.addEventListener("keydown", onHandleKeydown);
       window.addEventListener("focus-chat", onHandleFocusChat);
@@ -257,8 +268,8 @@
   <slot />
 </section>
 <ul bind:this={messageContainer}>
-  {#each [...messages, message].filter(Boolean) as { role, content }, index (index)}
-    <li transition:fade><Message {role} {content} /></li>
+  {#each [...messages, message].filter(Boolean) as messageInstance, index (index)}
+    <li transition:fade><Message {...messageInstance} on:toggle-starred={onMessageToggleStarred(index)} /></li>
   {/each}
 </ul>
 <Search />
@@ -300,16 +311,14 @@
   ul {
     list-style-type: none;
     scroll-behavior: smooth;
-    padding: unset;
-    text-align: left;
+    margin-left: -8px;
+    padding: 12px 12px;
     display: flex;
     align-items: flex-start;
     flex-direction: column;
     overflow-y: auto;
     flex: 1 1;
-    & > li {
-      margin: 2px;
-    }
+    gap: 4px;
   }
   textarea {
     color: unset;
@@ -334,14 +343,13 @@
   }
   section {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     &.system {
-      align-items: flex-start;
-      margin: 8px 0;
+      padding-top: 8px;
+      padding-bottom: 4px;
     }
     &.content {
-      align-items: flex-end;
-      margin: 8px 0 0;
+      padding-top: 8px;
     }
     & > textarea {
       flex: 1 1;
