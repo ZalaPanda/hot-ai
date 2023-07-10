@@ -202,7 +202,7 @@
     </section>
     <label>
       <input type={"text"} value={activePreset.name} placeholder={"Preset name"} size={12} on:input={onPresetNameInput} />
-      <input type={"checkbox"} checked={activePreset.enabled} on:change={onPresetEnabledChange} /> Enabled
+      <input type={"checkbox"} checked={activePreset.enabled} on:change={onPresetEnabledChange} />{activePreset.enabled ? "Enabled" : "Disabled"}
     </label>
     <small>Icons by <a href="https://icons8.com" on:click={onHyperlinkClick}>Icons8</a></small>
   </Dialog>
