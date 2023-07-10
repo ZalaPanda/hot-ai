@@ -15,7 +15,7 @@ Icons: [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/b
 
 ## GPT-4 vs GPT-3.5 Turbo
 
-> **Note:** GPT-4 costs `20 times more expensive` than GPT-3.5! ... and Turbo is faster as well. Source: [Pricing](https://openai.com/pricing)
+> **Note:** GPT-4 is `20x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly!
 
 | Model          | Context | Input               | Output             |
 | -------------- | ------- | ------------------- | ------------------ |
