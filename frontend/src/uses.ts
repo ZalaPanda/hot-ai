@@ -1,4 +1,4 @@
-import type { TransitionConfig, EasingFunction } from 'svelte/types/runtime/transition';
+import type { TransitionConfig, EasingFunction } from "svelte/transition";
 
 export interface TypewriterParams {
   speed?: number;
@@ -209,12 +209,16 @@ export const clickOutside = (
 
 export const adjustSize = (node: HTMLTextAreaElement, { rows = 1, maxHeight = 85 } = {}): ReturnType<Action> => {
   node.setAttribute("rows", String(rows));
-  const onInput = () => {
+  const onCheckHeight = () => {
     node.style.height = "0px"; // reset height
     node.style.height = node.scrollHeight && `${Math.min(node.scrollHeight, maxHeight)}px` || "";
   };
-  node.addEventListener("input", onInput);
+  window.addEventListener("resize", onCheckHeight);
+  node.addEventListener("input", onCheckHeight);
   return {
-    destroy: () => node.removeEventListener("input", onInput)
+    destroy: () => {
+      window.removeEventListener("resize", onCheckHeight);
+      node.removeEventListener("input", onCheckHeight);
+    }
   };
 };

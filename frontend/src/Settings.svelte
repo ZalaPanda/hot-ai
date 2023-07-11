@@ -1,24 +1,32 @@
+<script context="module" lang="ts">
+  const isWails = !!window["go"];
+  const imageSize = 42;
+</script>
+
 <script lang="ts">
   import { onMount } from "svelte";
-  import { GetKeys, GetModifiers, GetVersionNumber, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled, SetWindowBounds } from "../wailsjs/go/main/App";
-  import { WindowSetAlwaysOnTop, WindowIsMaximised, WindowMaximise, WindowUnmaximise, EventsOn, EventsOff, WindowShow, BrowserOpenURL } from "../wailsjs/runtime";
-  import { settings, type HotKey } from "./stores";
+  import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
+  import { BrowserOpenURL } from "../wailsjs/runtime";
+  import { settings, presets, type HotKey, type Preset } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Dialog from "./Dialog.svelte";
   import imageSettings from "./assets/images/options-64.png";
   import imageOpen from "./assets/images/open-64.png";
-
-  const isWails = !!window["go"];
+  import { spring } from "svelte/motion";
 
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
+  let models: string[] = [];
   let update: { name: string; currentVersion: string; latestVersion: string; url: string };
   let autostarted = false;
   let isVisible = false;
 
+  let modelSelect: HTMLSelectElement;
   let modifiersSelect: HTMLSelectElement;
   let keySelect: HTMLSelectElement;
+
+  $: if (isVisible && !models.length && $settings.apiKey) onReloadModels();
 
   const onToggleSettings = () => (isVisible = !isVisible);
 
@@ -37,30 +45,8 @@
           .at(0),
       };
       if (!hotKey.modifiers.length || !hotKey.key) return;
-      console.log("register", hotKey.modifiers, hotKey.key);
       await SetToggleHotkey(hotKey.modifiers, hotKey.key);
       settings.update((settings) => ({ ...settings, hotKey }));
-    } catch (error) {
-      dispatchError(error);
-    }
-  };
-
-  const onToggleMaximise = async () => {
-    try {
-      const isMaximized = !(await WindowIsMaximised());
-      if (isMaximized) WindowMaximise();
-      else WindowUnmaximise();
-      settings.update((settings) => ({ ...settings, isMaximized }));
-    } catch (error) {
-      dispatchError(error);
-    }
-  };
-
-  const onToggleAlwaysOnTop = async () => {
-    try {
-      const alwaysOnTop = !$settings.alwaysOnTop;
-      WindowSetAlwaysOnTop(alwaysOnTop);
-      settings.update((settings) => ({ ...settings, alwaysOnTop }));
     } catch (error) {
       dispatchError(error);
     }
@@ -77,53 +63,92 @@
       await SetAutostarterEnabled(!autostarted);
       autostarted = await GetAutostarterEnabled();
     } catch (error) {
-      console.error(error);
+      dispatchError(error);
     }
-  };
-
-  const onHandleKeydown = (event: KeyboardEvent) => {
-    if (event.key === "F11") return onToggleMaximise();
-    if (event.key === "F12") return onToggleAlwaysOnTop();
-  };
-
-  const onHandleSaveBounds = (bounds: [number, number, number, number]) => {
-    settings.update((settings) => ({ ...settings, bounds }));
   };
 
   const onDismissUpdate = () => (update = undefined);
 
-  const onUpdateOpenClick = () => update?.url && BrowserOpenURL(update.url);
+  const onHyperlinkClick = (event: MouseEvent & { currentTarget: EventTarget & HTMLAnchorElement }) => {
+    const url = event.currentTarget?.href;
+    url && BrowserOpenURL(url);
+  };
+
+  const onReloadModels = async () => {
+    try {
+      models = [];
+      const response = await fetch("https://api.openai.com/v1/models", {
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${$settings.apiKey}` },
+      });
+      if (!response.ok) throw new Error(`${response.status} model list error`);
+      const { data } = (await response.json()) as { data: { id: string }[] };
+      models = data.map((model) => model.id).filter((model) => model.startsWith("gpt")); // https://platform.openai.com/docs/models/model-endpoint-compatibility
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  const onChangeModel = () => {
+    try {
+      const model = modelSelect.value;
+      settings.update((settings) => ({ ...settings, model }));
+    } catch (error) {
+      dispatchError(error);
+    }
+  };
+
+  let activePreset = $presets.at(0);
+  let dragging: { preset: Preset; clientX: number; clientY: number };
+  let delta = spring({ x: 0, y: 0, scale: 1 }, { stiffness: 0.1, damping: 0.25 });
+
+  const onPresetSelect = (preset: Preset) => () => (activePreset = preset);
+
+  const onPresetDragStart = (preset: Preset) => (event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
+    const { clientX, clientY } = event;
+    event.preventDefault();
+    activePreset = preset;
+    dragging = { preset, clientX, clientY };
+    delta.set({ x: 0, y: 0, scale: 1.1 }, { hard: true });
+    window.addEventListener("mousemove", onPresetDragMove);
+    window.addEventListener("mouseup", onPresetDragStop);
+  };
+
+  const onPresetDragMove = (event: MouseEvent) => {
+    delta.update((delta) => ({ ...delta, x: event.clientX - dragging.clientX, y: Math.min(Math.max(event.clientY - dragging.clientY, -imageSize), imageSize) }));
+  };
+
+  const onPresetDragStop = (event: MouseEvent) => {
+    presets.update((presets) => {
+      const currIndex = presets.findIndex((preset) => preset === activePreset);
+      const nextIndex = Math.max(Math.min(Math.round(currIndex + (event.clientX - dragging.clientX) / imageSize), presets.length - 1), 0);
+      return presets.map((preset, index, presets) => (index === currIndex ? presets[nextIndex] : index === nextIndex ? presets[currIndex] : preset));
+    });
+    dragging = undefined;
+    window.removeEventListener("mousemove", onPresetDragMove);
+    window.removeEventListener("mouseup", onPresetDragStop);
+  };
+
+  const onPresetNameInput = (event: Event & { currentTarget: HTMLInputElement }) => {
+    const updatedPreset = { ...activePreset, name: event.currentTarget.value };
+    presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
+    activePreset = updatedPreset;
+  };
+
+  const onPresetEnabledChange = (event: Event & { currentTarget: HTMLInputElement }) => {
+    const updatedPreset = { ...activePreset, enabled: event.currentTarget.checked };
+    presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
+    activePreset = updatedPreset;
+  };
 
   onMount(() => {
     try {
-      const { apiKey, hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
+      const { apiKey } = $settings;
       if (!apiKey) isVisible = true;
       if (!isWails) return;
 
-      document.addEventListener("keydown", onHandleKeydown);
-      EventsOn("save-bounds", onHandleSaveBounds);
-
-      if (isMaximized) WindowMaximise();
-      else WindowUnmaximise();
-      WindowSetAlwaysOnTop(alwaysOnTop);
-      WindowShow();
-
       (async () => {
         try {
-          [keys, modifiers, autostarted] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled()]);
-          if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
-          if (bounds) await SetWindowBounds(bounds);
-
-          const response = await fetch("https://api.github.com/repos/ZalaPanda/hot-ai/releases/latest");
-          const latestRelease = (await response.json()) as { name: string; tag_name: string; html_url: string };
-          const versionNumber = await GetVersionNumber();
-          if (latestRelease.tag_name === versionNumber) return;
-          update = {
-            currentVersion: versionNumber,
-            latestVersion: latestRelease.tag_name,
-            name: latestRelease.name,
-            url: latestRelease.html_url,
-          };
+          [keys, modifiers, autostarted, update] = await Promise.all([GetKeys(), GetModifiers(), GetAutostarterEnabled(), CheckForUpdate()]);
         } catch (error) {
           dispatchError(error);
         }
@@ -131,10 +156,6 @@
     } catch (error) {
       dispatchError(error);
     }
-    return () => {
-      document.removeEventListener("keydown", onHandleKeydown);
-      EventsOff("save-bounds");
-    };
   });
 </script>
 
@@ -145,6 +166,14 @@
     <div>OpenAI API key:</div>
     <label>
       <input value={$settings.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
+    </label>
+    <div>OpenAI model: <button on:click={onReloadModels} disabled={!!$settings.hotKey}>Refresh</button></div>
+    <label>
+      <select bind:this={modelSelect} on:change={onChangeModel} disabled={!models.length}>
+        {#each models as value}
+          <option {value} selected={value === ($settings.model || "gpt-3.5-turbo")}>{value}</option>
+        {/each}
+      </select>
     </label>
     <div>Global hotkey: <button on:click={onClearHotKey} disabled={!isWails || !$settings.hotKey}>Clear</button></div>
     <label>
@@ -160,17 +189,24 @@
       </select>
     </label>
     <label>
-      <input type={"checkbox"} checked={$settings.isMaximized} on:change={onToggleMaximise} disabled={!isWails} />
-      Maximized (<kbd>F11</kbd>)
-    </label>
-    <label>
-      <input type={"checkbox"} checked={$settings.alwaysOnTop} on:change={onToggleAlwaysOnTop} disabled={!isWails} />
-      Always on Top (<kbd>F12</kbd>)
-    </label>
-    <label>
       <input type={"checkbox"} checked={autostarted} on:change={onToggleAutostarter} disabled={!isWails} />
       Auto-start with system
     </label>
+    <section>
+      {#each $presets as preset (preset.image)}
+        {@const style = preset === dragging?.preset && `transform: translate(${$delta.x}px,${$delta.y}px) scale(${$delta.scale}); z-index: 1;`}
+        {@const active = preset === activePreset}
+        {@const enabled = preset.enabled}
+        <button on:click={onPresetSelect(preset)} on:mousedown={onPresetDragStart(preset)} {style}>
+          <img src={preset.image} alt={preset.image} class:active class:enabled />
+        </button>
+      {/each}
+    </section>
+    <label>
+      <input type={"text"} value={activePreset.name} placeholder={"Preset name"} size={12} on:input={onPresetNameInput} />
+      <input type={"checkbox"} checked={activePreset.enabled} on:change={onPresetEnabledChange} />{activePreset.enabled ? "Enabled" : "Disabled"}
+    </label>
+    <small>Icons by <a href="https://icons8.com" on:click={onHyperlinkClick}>Icons8</a></small>
   </Dialog>
 {/if}
 {#if update}
@@ -178,32 +214,58 @@
     <h1>New version available!</h1>
     <div>Current version: <b>{update.currentVersion}</b></div>
     <div>Latest version: <b>{update.latestVersion}</b></div>
-    <button on:click={onUpdateOpenClick}><img src={imageOpen} alt={"Open"} />{update.name}</button>
+    <a href={update.url} on:click={onHyperlinkClick}><img src={imageOpen} alt={"Open"} />{update.name}</a>
   </Dialog>
 {/if}
 
 <style lang="less">
   label {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     margin-bottom: 4px;
   }
+  input[type="password"],
   select {
+    width: 240px;
+  }
+  select[size] {
+    width: unset;
     height: 100px;
   }
   input[type="checkbox"] {
     min-width: unset;
-    width: 1.3em;
-    height: 1.3em;
-    background-color: white;
+    width: 1em;
+    height: 1em;
+    background-color: #ffffff;
     border-radius: 50%;
     vertical-align: middle;
-    border: 1px solid #ddd;
+    border: 2px solid #dfe3e9;
     appearance: none;
     cursor: pointer;
     &:checked {
-      background-color: green;
+      background-color: #52b788;
     }
+  }
+  section {
+    margin-top: 8px;
+    display: flex;
+    & > button {
+      padding: 1px 4px;
+      img {
+        filter: blur(2px);
+        &:hover,
+        &.active {
+          filter: none;
+        }
+        opacity: 0.3;
+        &.enabled {
+          opacity: 1;
+        }
+      }
+    }
+  }
+  small {
+    margin-top: 8px;
   }
 </style>

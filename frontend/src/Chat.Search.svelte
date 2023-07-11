@@ -1,30 +1,40 @@
+<script context="module" lang="ts">
+  export const dispatchToggleSearch = () => window.dispatchEvent(new FocusEvent("toggle-search"));
+</script>
+
 <script lang="ts">
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
   import { search } from "./stores";
   import { autoFocus } from "./uses";
   import imageSearch from "./assets/images/search-64.png";
+  import { dispatchFocusChat } from "./Chat.svelte";
 
   let searchInput: HTMLInputElement;
 
-  const hasFocus = () => document.activeElement === searchInput;
-
-  const onHandleKeydown = (event: KeyboardEvent) => {
-    if (event.key === "F3" || (event.ctrlKey && event.key === "F")) return onToggleSearch();
+  const onFocusSearch = () => {
+    searchInput.select();
   };
 
-  const onHideSearch = () => ($search = undefined);
-  const onToggleSearch = () => ($search && !hasFocus() ? searchInput.select() : ($search = $search === undefined ? "" : undefined));
+  const onHideSearch = () => {
+    $search = undefined;
+    dispatchFocusChat();
+  };
+
+  const onToggleSearch = () => {
+    if ($search === undefined) $search = "";
+    else document.hasFocus() && document.activeElement === searchInput ? onHideSearch() : onFocusSearch();
+  };
 
   const onSearchKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLInputElement }) => {
-    if (event.key != "Escape") return;
+    if (event.key !== "Escape") return;
     event.preventDefault();
     onHideSearch();
   };
 
   onMount(() => {
-    document.addEventListener("keydown", onHandleKeydown);
-    return () => document.removeEventListener("keydown", onHandleKeydown);
+    window.addEventListener("toggle-search", onToggleSearch);
+    return () => window.removeEventListener("toggle-search", onToggleSearch);
   });
 </script>
 
@@ -36,6 +46,11 @@
 {/if}
 
 <style lang="less">
+  article {
+    position: relative;
+    top: -36px;
+    height: 0;
+  }
   input {
     position: absolute;
     background-color: #ffebba;
