@@ -12,13 +12,13 @@
   type CompletionMessage = {
     role?: "system" | "user" | "assistant" | "function";
     content: string;
-    starred?: boolean;
   };
   type CompletionRequest = {
     model: string;
     messages: CompletionMessage[];
     stream: true;
   };
+  type ChatMessage = CompletionMessage & { starred?: boolean };
 
   const extractErrorMessage = async (response: Response) => {
     try {
@@ -50,7 +50,7 @@
   let contentTextarea: HTMLTextAreaElement;
   let abortButton: HTMLButtonElement;
 
-  let messages: CompletionMessage[] = [];
+  let messages: ChatMessage[] = [];
   let message: CompletionMessage;
   let controller: AbortController;
   let autoscroll: boolean;
@@ -103,7 +103,7 @@
       abortButton.focus();
       const request: CompletionRequest = {
         model: $settings.model || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: activePreset.system }, ...messages.filter((message) => message.role)],
+        messages: [{ role: "system", content: activePreset.system }, ...messages.filter((message) => message.role).map(({ role, content }) => ({ role, content } as CompletionMessage))],
         stream: true,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
