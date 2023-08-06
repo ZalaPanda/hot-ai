@@ -55,8 +55,9 @@
   let controller: AbortController;
   let autoscroll: boolean;
   let isVisible: boolean = true;
+  let activePreset: Preset;
 
-  $: activePreset = $presets.at(0);
+  $: activePreset = $presets.includes(activePreset) ? activePreset : $presets.at(0);
 
   beforeUpdate(() => {
     if (!messageContainer) return;
