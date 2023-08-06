@@ -13,6 +13,8 @@ Building: `wails build -clean -webview2 embed`
 
 Icons: [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/bearicons/external-bearicons-outline-color-bearicons) from [Icons8](https://icons8.com)
 
+Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts#prompts)
+
 ## GPT-4 vs GPT-3.5 Turbo
 
 > **Note:** GPT-4 is `20x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly!
