@@ -15,7 +15,7 @@
   export let starred: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher();
-  const options: marked.MarkedOptions = { headerIds: false, mangle: false, breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
+  const options: marked.MarkedOptions = { breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
 
   $: expression = $search ? RegExp(new Option($search).innerHTML, "ig") : undefined;
   $: html =
@@ -34,7 +34,7 @@
         },
       })) ||
     undefined;
-  const onCopyToClipboard = () => ClipboardSetText(content) && dispatchFocusChat();
+  const onCopyToClipboard = () => dispatchFocusChat() && ClipboardSetText(content || "");
   const onToggleStarred = () => dispatch("toggle-starred");
 </script>
 

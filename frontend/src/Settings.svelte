@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-  const isWails = !!window["go"];
+  const isWails = !!Object.hasOwn(window, "go");
   const imageSize = 42;
 </script>
 
@@ -7,7 +7,7 @@
   import { onMount } from "svelte";
   import { GetKeys, GetModifiers, CheckForUpdate, SetToggleHotkey, GetAutostarterEnabled, SetAutostarterEnabled } from "../wailsjs/go/main/App";
   import { BrowserOpenURL } from "../wailsjs/runtime";
-  import { settings, presets, type HotKey, type Preset } from "./stores";
+  import { settings, presets, fallbackPreset, type HotKey, type Preset } from "./stores";
   import { autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Dialog from "./Dialog.svelte";
@@ -18,7 +18,7 @@
   let keys: { [key: string]: any } = [];
   let modifiers: { [key: string]: any } = [];
   let models: string[] = [];
-  let update: { name: string; currentVersion: string; latestVersion: string; url: string };
+  let update: { name: string; currentVersion: string; latestVersion: string; url: string } | undefined;
   let autostarted = false;
   let isVisible = false;
 
@@ -39,10 +39,11 @@
     try {
       const hotKey: HotKey = {
         modifiers: [...modifiersSelect.options].filter((option) => option.selected).map((option) => Number(option.value)),
-        key: [...keySelect.options]
-          .filter((option) => option.selected)
-          .map((option) => Number(option.value))
-          .at(0),
+        key:
+          [...keySelect.options]
+            .filter((option) => option.selected)
+            .map((option) => Number(option.value))
+            .at(0) ?? 0,
       };
       if (!hotKey.modifiers.length || !hotKey.key) return;
       await SetToggleHotkey(hotKey.modifiers, hotKey.key);
@@ -53,8 +54,8 @@
   };
 
   const onClearHotKey = () => {
-    modifiersSelect.value = undefined;
-    keySelect.value = undefined;
+    modifiersSelect.value = String();
+    keySelect.value = String();
     settings.update((settings) => ({ ...settings, hotKey: undefined }));
   };
 
@@ -97,8 +98,8 @@
     }
   };
 
-  let activePreset = $presets.at(0);
-  let dragging: { preset: Preset; clientX: number; clientY: number };
+  let activePreset = $presets.at(0) ?? fallbackPreset;
+  let dragging: { preset: Preset; clientX: number; clientY: number } | undefined;
   let delta = spring({ x: 0, y: 0, scale: 1 }, { stiffness: 0.1, damping: 0.25 });
 
   const onPresetSelect = (preset: Preset) => () => (activePreset = preset);
@@ -114,13 +115,13 @@
   };
 
   const onPresetDragMove = (event: MouseEvent) => {
-    delta.update((delta) => ({ ...delta, x: event.clientX - dragging.clientX, y: Math.min(Math.max(event.clientY - dragging.clientY, -imageSize), imageSize) }));
+    delta.update((delta) => (dragging ? { ...delta, x: event.clientX - dragging.clientX, y: Math.min(Math.max(event.clientY - dragging.clientY, -imageSize), imageSize) } : delta));
   };
 
   const onPresetDragStop = (event: MouseEvent) => {
     presets.update((presets) => {
       const currIndex = presets.findIndex((preset) => preset === activePreset);
-      const nextIndex = Math.max(Math.min(Math.round(currIndex + (event.clientX - dragging.clientX) / imageSize), presets.length - 1), 0);
+      const nextIndex = Math.max(Math.min(Math.round(currIndex + (dragging ? event.clientX - dragging.clientX : 0) / imageSize), presets.length - 1), 0);
       return presets.map((preset, index, presets) => (index === currIndex ? presets[nextIndex] : index === nextIndex ? presets[currIndex] : preset));
     });
     dragging = undefined;
@@ -129,13 +130,13 @@
   };
 
   const onPresetNameInput = (event: Event & { currentTarget: HTMLInputElement }) => {
-    const updatedPreset = { ...activePreset, name: event.currentTarget.value };
+    const updatedPreset = { ...activePreset, name: event.currentTarget.value } as Preset;
     presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
     activePreset = updatedPreset;
   };
 
   const onPresetEnabledChange = (event: Event & { currentTarget: HTMLInputElement }) => {
-    const updatedPreset = { ...activePreset, enabled: event.currentTarget.checked };
+    const updatedPreset = { ...activePreset, enabled: event.currentTarget.checked } as Preset;
     presets.update((presets) => presets.map((preset) => (preset === activePreset ? updatedPreset : preset)));
     activePreset = updatedPreset;
   };
@@ -167,7 +168,7 @@
     <label>
       <input value={$settings.apiKey || ""} type={"password"} on:change={onChangeApiKey} use:autoFocus />
     </label>
-    <div>OpenAI model: <button on:click={onReloadModels} disabled={!!$settings.hotKey}>Refresh</button></div>
+    <div>OpenAI model: <button on:click={onReloadModels} disabled={!$settings.apiKey}>Refresh</button></div>
     <label>
       <select bind:this={modelSelect} on:change={onChangeModel} disabled={!models.length}>
         {#each models as value}
@@ -194,7 +195,7 @@
     </label>
     <section>
       {#each $presets as preset (preset.image)}
-        {@const style = preset === dragging?.preset && `transform: translate(${$delta.x}px,${$delta.y}px) scale(${$delta.scale}); z-index: 1;`}
+        {@const style = preset === dragging?.preset ? `transform: translate(${$delta.x}px,${$delta.y}px) scale(${$delta.scale}); z-index: 1;` : undefined}
         {@const active = preset === activePreset}
         {@const enabled = preset.enabled}
         <button on:click={onPresetSelect(preset)} on:mousedown={onPresetDragStart(preset)} {style}>

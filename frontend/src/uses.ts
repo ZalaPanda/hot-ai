@@ -24,7 +24,7 @@ export const typewriter = (node: HTMLElement, { speed = 1.2, easing }: Typewrite
     throw new Error(`This transition only works on elements with a single text node child`);
   }
 
-  const text = node.textContent;
+  const text = node.textContent ?? '';
   const duration = text.length / (speed * 0.01);
 
   return {
@@ -57,7 +57,7 @@ export interface FlipboardParams {
  */
 export const flipboard = (node: HTMLElement, { delay = 0, duration = 400, easing }: FlipboardParams): TransitionConfig => {
   const randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
-  const text = node.textContent.trim();
+  const text = (node.textContent ?? '').trim();
 
   let lastTime = 0;
 

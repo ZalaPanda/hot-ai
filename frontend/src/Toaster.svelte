@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-  export const dispatchError = (error: Error | string) => window.dispatchEvent(new ErrorEvent("error", error instanceof Error ? error : { message: String(error) }));
+  export const dispatchError = (error: Error | string | unknown) => window.dispatchEvent(new ErrorEvent("error", error instanceof Error ? error : { message: String(error) }));
 </script>
 
 <script lang="ts">
