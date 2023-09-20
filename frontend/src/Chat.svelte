@@ -29,7 +29,7 @@
     }
   };
 
-  const isWails = !!window["go"];
+  const isWails = !!Object.hasOwn(window, "go");
 </script>
 
 <script lang="ts">
@@ -37,7 +37,7 @@
   import { fade } from "svelte/transition";
   import { EventsOff, EventsOn, WindowHide, WindowIsMaximised, WindowMaximise, WindowSetAlwaysOnTop, WindowShow, WindowUnmaximise } from "../wailsjs/runtime";
   import { SetToggleHotkey, SetWindowBounds } from "../wailsjs/go/main/App";
-  import { presets, settings, type Preset } from "./stores";
+  import { settings, presets, fallbackPreset, type Preset } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
   import { dispatchError } from "./Toaster.svelte";
   import Search, { dispatchToggleSearch } from "./Chat.Search.svelte";
@@ -51,13 +51,13 @@
   let abortButton: HTMLButtonElement;
 
   let messages: ChatMessage[] = [];
-  let message: CompletionMessage;
-  let controller: AbortController;
+  let message: CompletionMessage | undefined;
+  let controller: AbortController | undefined;
   let autoscroll: boolean;
   let isVisible: boolean = true;
   let activePreset: Preset;
 
-  $: activePreset = $presets.includes(activePreset) ? activePreset : $presets.at(0);
+  $: activePreset = $presets.includes(activePreset) ? activePreset : $presets.at(0) ?? fallbackPreset;
 
   beforeUpdate(() => {
     if (!messageContainer) return;
@@ -115,6 +115,7 @@
       });
       if (!response.ok) throw new Error(`${response.status} Request failed: ${await extractErrorMessage(response)}`);
       const decoder = new TextDecoderStream();
+      if (!response.body) throw new Error(`Response body is ${String(response.body)}`);
       const reader = response.body.pipeThrough(decoder).getReader();
       while (!controller.signal.aborted) {
         const { value, done } = await reader.read();
@@ -129,7 +130,7 @@
             .filter(Boolean)
             .map(({ delta: { role, content }, finish_reason }) => {
               if (role) message = { role, content: "" };
-              if (content) message.content += content;
+              if (message && content) message.content += content;
               // if (finish_reason) console.log("finish_reason", finish_reason);
             });
       }
@@ -233,7 +234,7 @@
           if (isMaximized) WindowMaximise();
           else WindowUnmaximise();
 
-          WindowSetAlwaysOnTop(alwaysOnTop);
+          WindowSetAlwaysOnTop(!!alwaysOnTop);
           WindowShow();
 
           if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
