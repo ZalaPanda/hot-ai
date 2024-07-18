@@ -18,11 +18,11 @@ Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompt
 
 ## GPT-4 vs GPT-3.5 Turbo
 
-> **Note:** GPT-4o is `10x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly! And don't forget to check out gpt-4o-mini.
+> **Note:** GPT-4o is `10x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly!
 
-GPT-4o: *"most advanced multimodal model that’s faster and cheaper than GPT-4"*
-GPT-4o mini 🔥: *"most cost-efficient small model that’s smarter and cheaper than GPT-3.5 Turbo, and has vision capabilities"*
-GPT-3.5 Turbo: *"fast, inexpensive model for simple tasks"*
+GPT-4o: *"most advanced multimodal model that’s faster and cheaper than GPT-4"*  
+GPT-4o mini 🔥: *"most cost-efficient small model that’s smarter and cheaper than GPT-3.5 Turbo, and has vision capabilities"*  
+GPT-3.5 Turbo: *"fast, inexpensive model for simple tasks"*  
 
 | Model          | Input               | Output             |
 | -------------- | ------------------- | ------------------ |
