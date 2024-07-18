@@ -4,6 +4,7 @@
 
 [ChatGPT](https://www.codegpt.co/) is very good but I wanted a tiny garage project to learn/experiment with [go](https://go.dev/) + test [wails](https://wails.io/) with an actual project + learn more about [prompting](https://platform.openai.com/docs/introduction/prompts-and-completions).
 
+Update: `go get -u && go mod tidy`
 Development: `wails dev`  
 Building: `wails build -clean -webview2 embed`
 
@@ -17,11 +18,14 @@ Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompt
 
 ## GPT-4 vs GPT-3.5 Turbo
 
-> **Note:** GPT-4 is `20x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly!
+> **Note:** GPT-4o is `10x` more expensive than GPT-3.5! Don't forget to check [pricing](https://openai.com/pricing) and [usage](https://platform.openai.com/account/usage) regularly! And don't forget to check out gpt-4o-mini.
 
-| Model          | Context | Input               | Output             |
-| -------------- | ------- | ------------------- | ------------------ |
-| GPT-4          | 8K      | $0.03 / 1K tokens   | $0.06 / 1K tokens  |
-| GPT-4          | 32K     | $0.06 / 1K tokens	 | $0.12 / 1K tokens  |
-| GPT-3.5 Turbo  | 4K      | $0.0015 / 1K tokens | $0.002 / 1K tokens |
-| GPT-3.5 Turbo  | 16K     | $0.003 / 1K tokens  | $0.004 / 1K tokens |
+GPT-4o: *"most advanced multimodal model that’s faster and cheaper than GPT-4"*
+GPT-4o mini 🔥: *"most cost-efficient small model that’s smarter and cheaper than GPT-3.5 Turbo, and has vision capabilities"*
+GPT-3.5 Turbo: *"fast, inexpensive model for simple tasks"*
+
+| Model          | Input               | Output             |
+| -------------- | ------------------- | ------------------ |
+| gpt-4o         | $5.00 / 1M tokens   | $15.00 / 1M tokens |
+| gpt-4o-mini    | $0.15 / 1M tokens   |  $0.60 / 1M tokens |
+| gpt-3.5-turbo  | $0.50 / 1M tokens   |  $1.50 / 1M tokens |

@@ -3,7 +3,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { ClipboardSetText } from "../wailsjs/runtime";
-  import { marked } from "marked";
+  import { marked, type MarkedOptions, type Token } from "marked";
   import DOMPurify from "dompurify";
   import { search } from "./stores";
   import { dispatchFocusChat } from "./Chat.svelte";
@@ -15,22 +15,23 @@
   export let starred: boolean | undefined = undefined;
 
   const dispatch = createEventDispatcher();
-  const options: marked.MarkedOptions = { breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
+  const options: MarkedOptions = { breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
+  marked.use({
+    hooks: {
+      postprocess: (html: string) => DOMPurify.sanitize(html.replace(/⁅/g, "<mark>").replace(/⁆/g, "</mark>")),
+    },
+  });
 
   $: expression = $search ? RegExp(new Option($search).innerHTML, "ig") : undefined;
   $: html =
     (content &&
       marked.parse(content, {
         ...options,
-        walkTokens: (token: marked.Token) => {
+        walkTokens: (token: Token) => {
           if ("tokens" in token) return;
           if ("text" in token && expression?.test(token["text"])) {
             token["text"] = token["text"].replace(expression, "⁅$&⁆");
           }
-        },
-        hooks: {
-          preprocess: (markdown: string) => markdown,
-          postprocess: (html: string) => DOMPurify.sanitize(html.replace(/⁅/g, "<mark>").replace(/⁆/g, "</mark>")),
         },
       })) ||
     undefined;
