@@ -2,12 +2,12 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "hot-ai",
   "outputfilename": "hot-ai",
-  "frontend:install": "pnpm install",
-  "frontend:build": "pnpm run build",
-  "frontend:dev:watcher": "pnpm run dev",
+  "frontend:install": "bun install",
+  "frontend:build": "bun run build",
+  "frontend:dev:watcher": "bun run dev",
   "frontend:dev:serverUrl": "auto",
   "info": {
-    "productVersion": "0.1.3",
+    "productVersion": "0.1.4",
     "copyright": "MIT license",
     "comments": "Built using Wails"
   }
