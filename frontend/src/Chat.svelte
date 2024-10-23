@@ -35,7 +35,7 @@
 <script lang="ts">
   import { beforeUpdate, afterUpdate, tick, onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { EventsOff, EventsOn, WindowHide, WindowIsMaximised, WindowMaximise, WindowSetAlwaysOnTop, WindowShow, WindowUnmaximise } from "../wailsjs/runtime";
+  import { EventsOff, EventsOn, WindowHide, WindowIsMaximised, WindowMaximise, WindowSetAlwaysOnTop, WindowShow, WindowUnmaximise, BrowserOpenURL } from "../wailsjs/runtime";
   import { SetToggleHotkey, SetWindowBounds } from "../wailsjs/go/main/App";
   import { settings, presets, fallbackPreset, type Preset } from "./stores";
   import { adjustSize, autoFocus } from "./uses";
@@ -74,7 +74,7 @@
     contentTextarea.select();
   };
 
-  const onContentKeypress = (event: KeyboardEvent & { currentTarget: EventTarget & HTMLTextAreaElement }) => {
+  const onContentKeypress = (event: KeyboardEvent) => {
     if (event.key != "Enter" || event.shiftKey) return;
     event.preventDefault();
     onChatCompletion();
@@ -180,6 +180,14 @@
     }
   };
 
+  const onHandleLinkClick = (event: MouseEvent) => {
+    const element = event.target as HTMLAnchorElement;
+    if (element.tagName !== "A") return;
+    event.preventDefault();
+    const url = element.href;
+    url && BrowserOpenURL(url);
+  };
+
   const onToggleMaximise = async () => {
     try {
       const isMaximized = !(await WindowIsMaximised());
@@ -229,6 +237,7 @@
       const { hotKey, alwaysOnTop, isMaximized, bounds } = $settings;
       if (!isWails) return;
 
+      window.addEventListener("click", onHandleLinkClick);
       window.addEventListener("keydown", onHandleKeydown);
       window.addEventListener("focus-chat", onHandleFocusChat);
       EventsOn("hotkey-press", onHandleHotkeyPress);
@@ -249,6 +258,7 @@
       dispatchError(error);
     }
     return () => {
+      window.removeEventListener("click", onHandleLinkClick);
       window.removeEventListener("keydown", onHandleKeydown);
       window.removeEventListener("focus-chat", onHandleFocusChat);
       EventsOff("hotkey-press");
@@ -266,7 +276,7 @@
   <span>{activePreset.name}</span>
 </h1>
 <section class:system={true}>
-  <textarea use:adjustSize={{ maxHeight: 58 }} bind:value={activePreset.system} on:change={onPresetSystemChange} />
+  <textarea use:adjustSize={{ maxHeight: 58 }} bind:value={activePreset.system} on:change={onPresetSystemChange}></textarea>
   <slot />
 </section>
 <ul bind:this={messageContainer}>
@@ -276,7 +286,7 @@
 </ul>
 <Search />
 <section class:content={true}>
-  <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize={{ maxHeight: 116 }} use:autoFocus bind:this={contentTextarea} />
+  <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize={{ maxHeight: 116 }} use:autoFocus bind:this={contentTextarea}></textarea>
   <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>
   <button on:click={onChatAbort} disabled={!controller} bind:this={abortButton}><img src={imageAbort} alt={"Abort"} /></button>
   <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} /></button>
