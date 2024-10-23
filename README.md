@@ -22,10 +22,10 @@ Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompt
 
 * GPT-4o: *most advanced multimodal model that’s faster and cheaper than GPT-4*
 * GPT-4o mini: *most cost-efficient small model that’s smarter and cheaper than GPT-3.5 Turbo* 🔥
-* GPT-3.5 Turbo: *fast, inexpensive model for simple tasks*
+* GPT-3.5 Turbo: *fast, expensive model for simple tasks*
 
 | Model          | Input               | Output             |
 | -------------- | ------------------- | ------------------ |
-| gpt-4o         | $5.00 / 1M tokens   | $15.00 / 1M tokens |
+| gpt-4o         | $2.50 / 1M tokens   | $10.00 / 1M tokens |
 | gpt-4o-mini    | $0.15 / 1M tokens   |  $0.60 / 1M tokens |
-| gpt-3.5-turbo  | $0.50 / 1M tokens   |  $1.50 / 1M tokens |
+| gpt-3.5-turbo  | $3.00 / 1M tokens   |  $8.00 / 1M tokens |
