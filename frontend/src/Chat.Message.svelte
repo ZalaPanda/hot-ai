@@ -3,7 +3,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { ClipboardSetText } from "../wailsjs/runtime";
-  import { marked, type MarkedOptions, type Token } from "marked";
+  import { marked, type Token } from "marked";
   import DOMPurify from "dompurify";
   import { search } from "./stores";
   import { dispatchFocusChat } from "./Chat.svelte";
@@ -13,28 +13,20 @@
   export let role: string | undefined = undefined;
   export let content: string | undefined = undefined;
   export let starred: boolean | undefined = undefined;
+  let tokens: Token[] = [];
+  let blocksParsed: string[] = [];
+  let blocksMarked: string[] = [];
 
   const dispatch = createEventDispatcher();
-  const options: MarkedOptions = { breaks: true, silent: true }; // NOTE: silent = no exceptions thrown
-  marked.use({
-    hooks: {
-      postprocess: (html: string) => DOMPurify.sanitize(html.replace(/⁅/g, "<mark>").replace(/⁆/g, "</mark>")),
-    },
-  });
-
-  $: expression = $search ? RegExp(new Option($search).innerHTML, "ig") : undefined;
-  $: html =
-    (content &&
-      marked.parse(content, {
-        ...options,
-        walkTokens: (token: Token) => {
-          if ("tokens" in token) return;
-          if ("text" in token && expression?.test(token["text"])) {
-            token["text"] = token["text"].replace(expression, "⁅$&⁆");
-          }
-        },
-      })) ||
-    undefined;
+  $: {
+    const lexedTokens = marked.lexer(content || "");
+    const keepToken = tokens.findLastIndex((token, index) => token.type === lexedTokens.at(index)?.type && token.raw === lexedTokens.at(index)?.raw);
+    if (keepToken < tokens.length) {
+      blocksParsed = [...blocksParsed.slice(0, keepToken), ...lexedTokens.slice(keepToken + 1).map((token) => DOMPurify.sanitize(marked.parser([token])))];
+      tokens = lexedTokens;
+    }
+  }
+  $: blocksMarked = $search ? blocksParsed.map((block) => block.replace(new RegExp($search, "gi"), "<mark>$&</mark>")) : blocksParsed;
   const onCopyToClipboard = () => dispatchFocusChat() && ClipboardSetText(content || "");
   const onToggleStarred = () => dispatch("toggle-starred");
 </script>
@@ -44,7 +36,7 @@
     <button on:click={onToggleStarred}><img src={imageStar} alt={"Toggle starred"} /></button>
     <button on:click={onCopyToClipboard}><img src={imageClipboard} alt={"Copy to clipboard"} /></button>
   </section>
-  {@html html}
+  {#each blocksMarked as block}{@html block}{/each}
 </article>
 
 <style lang="less">
