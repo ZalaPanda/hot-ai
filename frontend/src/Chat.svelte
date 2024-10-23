@@ -57,7 +57,7 @@
   let isVisible: boolean = true;
   let activePreset: Preset;
 
-  $: activePreset = $presets.includes(activePreset) ? activePreset : $presets.at(0) ?? fallbackPreset;
+  $: activePreset = $presets.includes(activePreset) ? activePreset : ($presets.at(0) ?? fallbackPreset);
 
   beforeUpdate(() => {
     if (!messageContainer) return;
@@ -97,14 +97,13 @@
       contentTextarea.value = "";
       contentTextarea.dispatchEvent(new InputEvent("input"));
       if (content) messages = messages.concat({ role: "user", content });
-
-      if (controller) controller.abort();
+      controller?.abort();
       controller = new AbortController();
       await tick();
       abortButton.focus();
       const request: CompletionRequest = {
-        model: $settings.model || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: activePreset.system }, ...messages.filter((message) => message.role).map(({ role, content }) => ({ role, content } as CompletionMessage))],
+        model: $settings.model || "gpt-4o-mini",
+        messages: [{ role: "system", content: activePreset.system }, ...messages.filter((message) => message.role).map(({ role, content }) => ({ role, content }) as CompletionMessage)],
         stream: true,
       };
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -117,26 +116,33 @@
       const decoder = new TextDecoderStream();
       if (!response.body) throw new Error(`Response body is ${String(response.body)}`);
       const reader = response.body.pipeThrough(decoder).getReader();
+      const chunks = [] as string[];
       while (!controller.signal.aborted) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value)
-          value
-            .split(/\n\n/)
-            .map((line) => line.replace(/^data: (?:\[DONE\])?/gm, ""))
-            .filter(Boolean)
-            .map((json) => JSON.parse(json))
-            .map((chunk) => chunk?.choices?.at(0))
-            .filter(Boolean)
-            .map(({ delta: { role, content }, finish_reason }) => {
-              if (role) message = { role, content: "" };
-              if (message && content) message.content += content;
-              // if (finish_reason) console.log("finish_reason", finish_reason);
-            });
+        [...chunks.splice(0, chunks.length), value]
+          .join("")
+          .split(/\n\n/)
+          .filter(Boolean)
+          .map((line) => line.replace(/^data: (?:\[DONE\])?/, ""))
+          .map((line) => {
+            try {
+              return JSON.parse(line);
+            } catch {
+              return chunks.push(line);
+            }
+          })
+          .map((chunk) => chunk?.choices?.at(0))
+          .filter(Boolean)
+          .map(({ delta: { role, content } }) => {
+            if (role) message = { role, content: "" };
+            if (message && content) message.content += content;
+          });
       }
     } catch (error) {
       if (error instanceof DOMException && error.code === DOMException.ABORT_ERR) return; // NOTE: The user aborted a request.
       dispatchError(error);
+      controller?.abort();
     } finally {
       const output = message;
       controller = undefined;
@@ -215,7 +221,6 @@
     if (!messageInstance) return;
     if (!messageInstance.role) messages = messages.filter((message) => message !== messageInstance);
     else messages = messages.map((message) => (message === messageInstance ? { ...messageInstance, starred: !messageInstance.starred } : message));
-    console.log(index, messages[index]);
     contentTextarea.select();
   };
 
@@ -231,12 +236,9 @@
 
       (async () => {
         try {
-          if (isMaximized) WindowMaximise();
-          else WindowUnmaximise();
-
-          WindowSetAlwaysOnTop(!!alwaysOnTop);
           WindowShow();
-
+          if (isMaximized) WindowMaximise();
+          if (alwaysOnTop) WindowSetAlwaysOnTop(alwaysOnTop);
           if (hotKey) await SetToggleHotkey(hotKey.modifiers, hotKey.key);
           if (bounds) await SetWindowBounds(bounds);
         } catch (error) {
@@ -264,7 +266,7 @@
   <span>{activePreset.name}</span>
 </h1>
 <section class:system={true}>
-  <textarea use:adjustSize bind:value={activePreset.system} on:change={onPresetSystemChange} />
+  <textarea use:adjustSize={{ maxHeight: 58 }} bind:value={activePreset.system} on:change={onPresetSystemChange} />
   <slot />
 </section>
 <ul bind:this={messageContainer}>
@@ -274,7 +276,7 @@
 </ul>
 <Search />
 <section class:content={true}>
-  <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize use:autoFocus bind:this={contentTextarea} />
+  <textarea on:keypress={onContentKeypress} disabled={!!controller} use:adjustSize={{ maxHeight: 116 }} use:autoFocus bind:this={contentTextarea} />
   <button on:click={onChatCompletion}><img src={imageSubmit} alt={"Submit"} /></button>
   <button on:click={onChatAbort} disabled={!controller} bind:this={abortButton}><img src={imageAbort} alt={"Abort"} /></button>
   <button on:click={onContentReset}><img src={imageReset} alt={"Reset"} /></button>
