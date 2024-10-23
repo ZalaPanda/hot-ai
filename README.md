@@ -12,9 +12,8 @@ Building: `wails build -clean -webview2 embed`
 
 ![Demo](demo.gif)
 
-Icons: [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/bearicons/external-bearicons-outline-color-bearicons) from [Icons8](https://icons8.com)
+The [bearicons Outline Color](https://icons8.com/icons/authors/DFlb6Xyr8saR/bearicons/external-bearicons-outline-color-bearicons) icons are from [Icons8](https://icons8.com)
 
-Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompts#prompts)
 
 ## GPT-4 vs GPT-3.5 Turbo
 
@@ -29,3 +28,12 @@ Prompts: [f/awesome-chatgpt-prompts](https://github.com/f/awesome-chatgpt-prompt
 | gpt-4o         | $2.50 / 1M tokens   | $10.00 / 1M tokens |
 | gpt-4o-mini    | $0.15 / 1M tokens   |  $0.60 / 1M tokens |
 | gpt-3.5-turbo  | $3.00 / 1M tokens   |  $8.00 / 1M tokens |
+
+
+## TODO
+
+ - [ ] Svelte 5 migration  
+   This is basically a complete rewrite of the frontend.
+   I know there is a [migration script](https://svelte.dev/docs/svelte/v5-migration-guide#Migration-script), but the entire structure needs to be redesigned (store < rune), and it's just not worth it. If there happens to be a development later on that makes it worthwhile to break everything apart, then maybe.
+ - [ ] Wails upgrade to v2.9.2  
+   In this new version, something is wrong with the focus after the [WindowShow](https://wails.io/docs/reference/runtime/window#windowshow) call. If I have time, I'll look into it and open an issue. However, it's possible that version 3 will be released before I get to it, and it might already be fixed in that version.

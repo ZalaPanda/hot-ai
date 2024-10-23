@@ -5,13 +5,13 @@
 
   export let duration = 2000;
   export let text = "?";
-  let timeout = 0;
+  let timeout: Timer | undefined = undefined;
 
   const dispatch = createEventDispatcher();
   const dispatchDismiss = () => dispatch("dismiss");
   const onUpdateTimeout = (duration: number) => () => {
     clearTimeout(timeout);
-    timeout = duration ? setTimeout(() => dispatch("dismiss"), duration) : 0;
+    timeout = duration ? setTimeout(() => dispatch("dismiss"), duration) : undefined;
   };
 
   onMount(() => onUpdateTimeout(duration)());

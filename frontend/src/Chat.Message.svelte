@@ -3,7 +3,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { ClipboardSetText } from "../wailsjs/runtime";
-  import { marked, type Token } from "marked";
+  import { marked } from "marked";
   import DOMPurify from "dompurify";
   import { search } from "./stores";
   import { dispatchFocusChat } from "./Chat.svelte";
@@ -13,20 +13,11 @@
   export let role: string | undefined = undefined;
   export let content: string | undefined = undefined;
   export let starred: boolean | undefined = undefined;
-  let tokens: Token[] = [];
-  let blocksParsed: string[] = [];
-  let blocksMarked: string[] = [];
+  $: tokens = marked.lexer(content || "");
+  $: blocksParsed = tokens.map((token) => DOMPurify.sanitize(marked.parser([token])));
+  $: blocksMarked = $search ? blocksParsed.map((block) => block.replace(new RegExp($search, "gi"), "<mark>$&</mark>")) : blocksParsed;
 
   const dispatch = createEventDispatcher();
-  $: {
-    const lexedTokens = marked.lexer(content || "");
-    const keepToken = tokens.findLastIndex((token, index) => token.type === lexedTokens.at(index)?.type && token.raw === lexedTokens.at(index)?.raw);
-    if (keepToken < tokens.length) {
-      blocksParsed = [...blocksParsed.slice(0, keepToken), ...lexedTokens.slice(keepToken + 1).map((token) => DOMPurify.sanitize(marked.parser([token])))];
-      tokens = lexedTokens;
-    }
-  }
-  $: blocksMarked = $search ? blocksParsed.map((block) => block.replace(new RegExp($search, "gi"), "<mark>$&</mark>")) : blocksParsed;
   const onCopyToClipboard = () => dispatchFocusChat() && ClipboardSetText(content || "");
   const onToggleStarred = () => dispatch("toggle-starred");
 </script>

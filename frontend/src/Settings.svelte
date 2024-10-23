@@ -172,7 +172,7 @@
     <label>
       <select bind:this={modelSelect} on:change={onChangeModel} disabled={!models.length}>
         {#each models as value}
-          <option {value} selected={value === ($settings.model || "gpt-3.5-turbo")}>{value}</option>
+          <option {value} selected={value === ($settings.model || "gpt-4o-mini")}>{value}</option>
         {/each}
       </select>
     </label>
