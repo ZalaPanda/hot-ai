@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 
@@ -190,7 +190,7 @@ func (a *App) CheckForUpdate() *Update {
 		return nil
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		runtime.LogErrorf(a.ctx, "Failed to read latest release: %v", err)
 		return nil
